@@ -1,0 +1,26 @@
+name: push-notify
+
+# Post one Discord notification per push to main (as Github-Repo-Updates), via the shared reusable
+# workflow in public roshne/addon-ci. Same shape as artifact-console's own push-notify.yml, except
+# this repo is public so the runner is plain ubuntu-latest, never self-hosted.
+#
+# DISCORD_PUSH_WEBHOOK is passed EXPLICITLY, never via `secrets: inherit` -- see
+# artifact-console's own push-notify.yml for why (Rackbops is a free org; `inherit` resolves to an
+# inaccessible org secret and silently shadows the repo-level one). Skips green until roshne sets
+# the DISCORD_PUSH_WEBHOOK repo secret.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/README.md"
+      - "**/CONTRIBUTING.md"
+      - "**/CONTEXT.md"
+
+jobs:
+  notify:
+    if: github.repository == 'Rackbops/artifact-console-plugins'
+    uses: roshne/addon-ci/.github/workflows/push-notify.yml@v1
+    with:
+      runner: '["ubuntu-latest"]'
+    secrets:
+      DISCORD_PUSH_WEBHOOK: ${{ secrets.DISCORD_PUSH_WEBHOOK }}

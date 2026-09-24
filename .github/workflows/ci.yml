@@ -1,0 +1,33 @@
+name: ci
+
+# artifact-console-plugins CI. This repo is public and every job here runs on GitHub-hosted
+# ubuntu-latest -- the org's self-hosted runner group refuses public repos anyway
+# (allows_public_repositories: false), and roshne's standing rule is that a public repo never
+# touches a self-hosted pool. `pnpm run check` is the same gate as local: build the workspace
+# (needed once a plugin's tests import its own built dist, and to validate the built bundles
+# check-bundles reads), generate-index --check, check-contract, check-bundles, biome, typecheck,
+# test.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Install
+        run: corepack enable && pnpm install --frozen-lockfile
+
+      - name: Check (build + generate-index + check-contract + check-bundles + biome + typecheck + test)
+        run: pnpm run check
