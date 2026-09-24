@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "plugins": [
+    {
+      "host": "artifact-console",
+      "name": "hello-remote",
+      "package": "@rackbops/ac-plugin-hello-remote",
+      "version": "0.1.0",
+      "hostApiVersion": 1,
+      "env": [],
+      "releases": [
+        {
+          "version": "0.1.0",
+          "date": "2026-09-24",
+          "notes": "First release: one panel, one card, `GET /ping`. Proves the third-party install path (#105)."
+        }
+      ]
+    }
+  ]
+}

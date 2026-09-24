@@ -1,0 +1,27 @@
+packages:
+  - plugins/*
+
+# esbuild ships its platform binary via a postinstall script; vitest needs it. Allow that
+# one build (committed so CI's `pnpm install --frozen-lockfile` runs it non-interactively).
+allowBuilds:
+  esbuild: true
+
+# Shared dependency versions referenced by each workspace package as `catalog:`, the same set
+# artifact-console (the host repo) uses, so a plugin built here typechecks against the same
+# TypeScript/React/Vitest versions the host itself builds with.
+catalog:
+  typescript: ^7.0.0
+  vitest: ^5.0.0
+  "@types/node": ^26.0.0
+  "@types/react": ^19.2.0
+  "@types/react-dom": ^19.2.0
+  react: ^19.2.0
+  react-dom: ^19.2.0
+  # Pinned exact: this version is published under the `next` dist-tag, not `latest` (#450), so a
+  # bare range would never resolve it.
+  "@rackbops/ac-plugin-contract": 2.0.0-alpha.33
+
+# pnpm's supply-chain gate holds back very recently published versions; the contract package ships
+# frequent prereleases this repo needs right away.
+minimumReleaseAgeExclude:
+  - "@rackbops/*"

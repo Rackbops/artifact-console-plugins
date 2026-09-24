@@ -1,0 +1,185 @@
+name: publish
+
+# Publish one plugin package to npm on a release tag `<id>-v<semver>` (e.g. hello-remote-v0.1.0).
+# ubuntu-latest, never self-hosted (this repo is public -- see ci.yml's own header). Publishing goes
+# through `pnpm publish` (not `npm publish`): pnpm rewrites `catalog:` specifiers in the published
+# package.json, and pnpm >= 11.1.3 does the OIDC exchange natively -- the same shape as
+# artifact-console's own release.yml `publish-agent`/`publish-contract` jobs, adapted for one
+# package resolved from the tag instead of a fixed name.
+on:
+  push:
+    tags: ["*-v*.*.*"]
+
+jobs:
+  publish:
+    if: github.repository == 'Rackbops/artifact-console-plugins'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          # No registry-url: setup-node would write an empty //registry.npmjs.org/:_authToken line
+          # into .npmrc with no NPM_TOKEN set, which makes pnpm assume auth is already configured
+          # and skip the OIDC exchange entirely (actions/setup-node#1551).
+
+      - name: Install
+        run: corepack enable && pnpm install --frozen-lockfile
+
+      - name: Resolve the plugin name and version from the tag
+        id: tag
+        shell: bash
+        env:
+          # The tag is read through env, never interpolated inline into a script body -- a crafted
+          # tag containing shell metacharacters could otherwise break out of an inline "${{ }}"
+          # expansion.
+          TAG: ${{ github.ref_name }}
+        run: |
+          name="${TAG%-v*}"
+          version="${TAG##*-v}"
+          if [ ! -d "plugins/$name" ]; then
+            echo "no such plugin: plugins/$name (from tag $TAG)" >&2
+            exit 1
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Require the package.json version to equal the tag's version
+        shell: bash
+        env:
+          NAME: ${{ steps.tag.outputs.name }}
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          pkg_version="$(node -p "require('./plugins/${NAME}/package.json').version")"
+          if [ "$pkg_version" != "$VERSION" ]; then
+            echo "tag version $VERSION != plugins/$NAME/package.json version $pkg_version" >&2
+            exit 1
+          fi
+
+      - name: Require a CHANGELOG section for this version
+        shell: bash
+        env:
+          NAME: ${{ steps.tag.outputs.name }}
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          # The same heading shape generate-index.mjs's own parseChangelog matches (## [x.y.z] -
+          # YYYY-MM-DD, or without brackets), so the two can never disagree about whether a version
+          # has a changelog entry.
+          if ! grep -qE "^##[[:space:]]+\[?${VERSION//./\\.}\]?[[:space:]]*-[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]*\$" \
+            "plugins/${NAME}/CHANGELOG.md"; then
+            echo "plugins/${NAME}/CHANGELOG.md has no section for version ${VERSION}" >&2
+            exit 1
+          fi
+
+      - name: Check (build + generate-index + check-contract + check-bundles + biome + typecheck + test)
+        run: pnpm run check
+
+      - name: Verify the published tarball will carry the declared server/frontend entries
+        shell: bash
+        env:
+          NAME: ${{ steps.tag.outputs.name }}
+        run: |
+          cd "plugins/${NAME}"
+          listing="$(npm pack --dry-run 2>&1)"
+          echo "$listing"
+          if ! echo "$listing" | grep -qF "dist/server.js"; then
+            echo "plugins/${NAME}: npm pack --dry-run does not list dist/server.js" >&2
+            exit 1
+          fi
+          has_frontend="$(node -p "require('./package.json').acPlugin.frontend !== undefined")"
+          if [ "$has_frontend" = "true" ] && ! echo "$listing" | grep -qF "dist/ui.js"; then
+            echo "plugins/${NAME}: declares acPlugin.frontend but npm pack --dry-run does not list dist/ui.js" >&2
+            exit 1
+          fi
+
+      # A copy of artifact-console's own release.yml `publish-agent`/`publish-contract` step, adapted
+      # for a package name resolved from the tag. Not continue-on-error: here the publish is the
+      # job's whole point, unlike the host repo's own best-effort agent/contract publish alongside an
+      # image build.
+      - name: Publish to npm
+        id: publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NAME: ${{ steps.tag.outputs.name }}
+          VERSION: ${{ steps.tag.outputs.version }}
+          # npm refuses a provenance bundle from a private source repository (422 "Unsupported
+          # GitHub Actions source repository visibility") -- moot here since this repo is public,
+          # but --provenance is still gated on the event payload rather than assumed, matching
+          # artifact-console's own rule (#526).
+          REPO_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          escalate() {
+            echo "::warning::$1 Publish the package by hand, then register a trusted publisher on npmjs.com (organization Rackbops / repository artifact-console-plugins / workflow publish.yml) so future tags publish via OIDC."
+            exit 1
+          }
+
+          # npm 11 refuses `npm publish` of a prerelease version with no explicit --tag; pnpm's
+          # publish shells out to npm. One stable dist-tag for every prerelease line (`next`) vs.
+          # `latest` for a stable version.
+          case "${VERSION%%+*}" in
+            *-*) tag=next ;;
+            *) tag=latest ;;
+          esac
+          echo "publishing @rackbops/ac-plugin-${NAME}@${VERSION} with --tag $tag"
+
+          # BREAK-GLASS: an NPM_TOKEN secret switches to classic token auth (no provenance) instead
+          # of OIDC -- for when the trusted publisher isn't registered yet, or OIDC itself is down.
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "NPM_TOKEN is set -- using classic token auth; OIDC trusted publishing is bypassed."
+            npm config set //registry.npmjs.org/:_authToken "${NODE_AUTH_TOKEN}" --location=user
+            auth_mode=token
+          else
+            echo "No NPM_TOKEN -- using OIDC trusted publishing."
+            auth_mode=oidc
+
+            if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+              escalate "OIDC id-token unavailable -- this job is missing 'permissions: id-token: write' (or it was overridden)."
+            fi
+
+            need=11.1.3; have="$(pnpm --version)"
+            if [ "$(printf '%s\n%s\n' "$need" "$have" | sort -V | head -n1)" != "$need" ]; then
+              escalate "pnpm ${have} is below the 11.1.3 native-OIDC floor (pnpm/pnpm#11526) -- bump packageManager in package.json."
+            fi
+
+            for rc in "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}" "$HOME/.npmrc" "${RUNNER_TEMP:-/nonexistent}/.npmrc" ".npmrc"; do
+              if [ -f "$rc" ] && grep -q '_authToken' "$rc"; then
+                escalate "${rc} sets an _authToken line, which makes pnpm skip the OIDC exchange (actions/setup-node#1551)."
+              fi
+            done
+          fi
+
+          provenance_flag=()
+          if [ "$auth_mode" = "oidc" ] && [ "${REPO_PRIVATE:-}" = "false" ]; then
+            provenance_flag=(--provenance)
+          elif [ "$auth_mode" = "oidc" ]; then
+            echo "Repository is private (or its visibility is unknown) -- publishing without provenance."
+          fi
+          if ! out="$(pnpm --filter "@rackbops/ac-plugin-${NAME}" publish --no-git-checks --access public --tag "$tag" "${provenance_flag[@]}" 2>&1)"; then
+            printf '%s\n' "$out" >&2
+            escalate "Publish failed (trusted publisher likely not configured yet -- this is expected before the very first release)."
+          fi
+          printf '%s\n' "$out"
+
+      - name: Extract the CHANGELOG section for the release notes
+        shell: bash
+        env:
+          NAME: ${{ steps.tag.outputs.name }}
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          awk -v ver="$VERSION" '
+            $0 ~ "^##[ \t]+\\[?" ver "\\]?[ \t]*-" { flag=1; next }
+            /^##[ \t]/ { flag=0 }
+            flag { print }
+          ' "plugins/${NAME}/CHANGELOG.md" > release-notes.md
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --title "$TAG" --notes-file release-notes.md

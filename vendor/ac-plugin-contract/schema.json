@@ -1,0 +1,495 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/AcPluginManifest",
+  "definitions": {
+    "AcPluginManifest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Permanent id: state key, route namespace (`/api/x/<id>/`), log prefix. Never rename."
+        },
+        "hostApiVersion": {
+          "type": "number",
+          "description": "Integer, equal to the host's HOST_API_VERSION."
+        },
+        "kind": {
+          "$ref": "#/definitions/PluginKind"
+        },
+        "server": {
+          "type": "string",
+          "description": "Server entry exporting `createPlugin(host)`; required for `kind: \"in-process\"`."
+        },
+        "frontend": {
+          "type": "string",
+          "description": "Frontend ESM entry; omitted by a plugin that contributes no UI."
+        },
+        "sidecar": {
+          "$ref": "#/definitions/SidecarSpec",
+          "description": "Image + health path; required when `kind: \"sidecar\"`."
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Host-agent capabilities the plugin may use, each granted per machine in Admin (E4)."
+        },
+        "contributes": {
+          "$ref": "#/definitions/Contributes"
+        },
+        "env": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/EnvVar"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "hostApiVersion",
+        "kind"
+      ],
+      "additionalProperties": false,
+      "description": "The `acPlugin` block of a plugin's package.json — everything the host needs before it loads any code. The host validates this against the generated JSON Schema (issue #26). `hostApiVersion` is an integer that must equal the host's `HOST_API_VERSION`."
+    },
+    "PluginKind": {
+      "type": "string",
+      "enum": [
+        "in-process",
+        "sidecar"
+      ],
+      "description": "How the host runs a plugin."
+    },
+    "SidecarSpec": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "string"
+        },
+        "healthPath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "image",
+        "healthPath"
+      ],
+      "additionalProperties": false,
+      "description": "A sidecar plugin's image and health path. Present when `kind === \"sidecar\"`."
+    },
+    "Contributes": {
+      "type": "object",
+      "properties": {
+        "panels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PanelContribution"
+          }
+        },
+        "cards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CardContribution"
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionContribution"
+          }
+        },
+        "jobs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/JobContribution"
+          }
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RouteContribution"
+          }
+        },
+        "settings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SettingContribution"
+          }
+        },
+        "themes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ThemeContribution"
+          }
+        },
+        "provides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SlotRef"
+          }
+        },
+        "consumes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SlotRef"
+          }
+        },
+        "attention": {
+          "type": "boolean",
+          "const": true,
+          "description": "#78: the plugin serves `GET /api/x/<id>/attention` -> `{ ok: true, items: AttentionItem[] }` (`attention.ts`). The `overview` plugin's rollup card discovers contributors via `PluginView.attention` (`views.ts`) rather than a second manifest read. Additive; always `true` when present (a boolean, not a route list, since the path is fixed)."
+        }
+      },
+      "additionalProperties": false,
+      "description": "The contribution points a plugin offers. Every field is optional; a plugin contributes a subset."
+    },
+    "PanelContribution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string",
+          "description": "Route the panel mounts at, e.g. \"/board\"."
+        },
+        "nav": {
+          "type": "string",
+          "description": "Named nav slot this panel wants to own (e.g. \"issues\"); optional."
+        },
+        "order": {
+          "type": "number",
+          "description": "Where this panel wants to sit among the tabs (#472): a finite number, lower first, after the fixed `Home` tab. Unset keeps the panel after every ordered one, in the existing order (plugin directory name, then declaration order), so declaring `order` on one panel never moves a panel that did not. A hint, not a claim: the operator's `tab_order` setting outranks it, and among the ordered panels an `installed` plugin's never precedes a `bundled` plugin's, so a third-party package declaring a small number cannot jump ahead of the bundled ordered panels (it still precedes every panel that declares no `order`). Additive; a manifest without it validates as before."
+        },
+        "export": {
+          "type": "string",
+          "description": "The export name in the plugin's frontend bundle."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "route",
+        "export"
+      ],
+      "additionalProperties": false,
+      "description": "A contributed nav tab (panel)."
+    },
+    "CardContribution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "sizes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Allowed grid sizes, e.g. [\"2x1\", \"3x1\"]."
+        },
+        "export": {
+          "type": "string",
+          "description": "The export name in the plugin's frontend bundle."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "sizes",
+        "export"
+      ],
+      "additionalProperties": false,
+      "description": "A contributed Overview card."
+    },
+    "ActionContribution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "description": "Button/label text; the shell falls back to `id` when omitted."
+        },
+        "scope": {
+          "type": "string",
+          "description": "What the action operates on, e.g. \"issue\" | \"report\" | \"global\"."
+        },
+        "confirm": {
+          "type": "boolean"
+        },
+        "danger": {
+          "type": "boolean"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionField"
+          },
+          "description": "The form the shell builds the action's modal from; omit for a no-input action."
+        }
+      },
+      "required": [
+        "id",
+        "scope"
+      ],
+      "additionalProperties": false,
+      "description": "A confirm-gated action; the shell builds its button + modal from these fields (#34)."
+    },
+    "ActionField": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Key the submitted value is collected under."
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/ActionFieldType"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "value",
+                  "label"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "description": "Choices for a `select`. A bare string is both value and label; the object form allows a distinct display label (so a later value≠label select is additive, not a breaking `string[]`→object change)."
+        },
+        "optionsFrom": {
+          "$ref": "#/definitions/ActionOptionsSource",
+          "description": "Choices fetched from a plugin route instead (#463), for a `select` or `multiselect` only -- the validator rejects it on any other type, and beside a non-empty `options` (one source of choices, not two). When the route cannot be loaded the shell degrades the field to a text box (a `multiselect`'s text is a comma-separated list) and shows the reason, so an action is never blocked by its picker. Additive."
+        }
+      },
+      "required": [
+        "name",
+        "label",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "One field of an action's form; the shell builds a labelled control from it."
+    },
+    "ActionFieldType": {
+      "type": "string",
+      "enum": [
+        "string",
+        "text",
+        "number",
+        "boolean",
+        "select",
+        "multiselect",
+        "hidden"
+      ],
+      "description": "Input control kind for an action field; the shell renders each `fields` entry by its `type`. `multiselect` (#463) is a set of choices whose submitted value is a `string[]`; `hidden` (#463) is a value with no control at all -- a snapshot the operator must not type into (the seed, the stored draft or the default is submitted unchanged). Both are additive; every earlier type behaves as before."
+    },
+    "ActionOptionsSource": {
+      "type": "object",
+      "properties": {
+        "route": {
+          "type": "string",
+          "description": "The route, relative to the declaring plugin's own namespace: the shell fetches `/api/x/<plugin-id><route>`. It must start with `/`, carry no query string, fragment, `..`, `//`, `%` or `\\`, and be one of the plugin's own declared `GET` routes (`contributes.routes`)."
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of OTHER fields of the same action whose current values are sent as query parameters (so a route can answer for the repo the operator has typed, say). The route is not fetched while any of them is empty, and is fetched again when one changes."
+        }
+      },
+      "required": [
+        "route"
+      ],
+      "additionalProperties": false,
+      "description": "Where a `select` / `multiselect` field's choices come from when they are not a fixed `options` list (#463): a `GET` route the DECLARING plugin itself registers, answering an `ActionOptionsResponse` (`action-options.ts`). The host validates it at manifest-load time (`plugins/validate.ts`)."
+    },
+    "JobContribution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "schedule": {
+          "type": "string",
+          "description": "5-field cron expression."
+        },
+        "timeoutSec": {
+          "type": "number",
+          "description": "Per-run timeout in seconds."
+        },
+        "runOn": {
+          "$ref": "#/definitions/JobRunOn"
+        },
+        "minAgentVersion": {
+          "type": "string",
+          "description": "A `runOn: \"agent\"` job is not dispatched to a machine whose paired agent version compares lower than this (#372, #80); the run row records the skip with its reason instead. Ignored for a `runOn: \"host\"` job. Additive; absent means every paired machine is always dispatched, as before this field existed."
+        }
+      },
+      "required": [
+        "id",
+        "schedule",
+        "timeoutSec",
+        "runOn"
+      ],
+      "additionalProperties": false,
+      "description": "A scheduled job."
+    },
+    "JobRunOn": {
+      "type": "string",
+      "enum": [
+        "host",
+        "agent"
+      ],
+      "description": "Where a contributed job runs: in the host, or fanned out to the paired agents (E4)."
+    },
+    "RouteContribution": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "$ref": "#/definitions/HttpMethod"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path under the plugin's namespace, e.g. \"/feed\"."
+        }
+      },
+      "required": [
+        "method",
+        "path"
+      ],
+      "additionalProperties": false,
+      "description": "An HTTP route; the host mounts it under `/api/x/<plugin-id>/<path>`."
+    },
+    "HttpMethod": {
+      "type": "string",
+      "enum": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "description": "HTTP method for a contributed route."
+    },
+    "SettingContribution": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/SettingType"
+        },
+        "default": {
+          "type": [
+            "string",
+            "number",
+            "boolean"
+          ]
+        }
+      },
+      "required": [
+        "key",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "A plugin setting."
+    },
+    "SettingType": {
+      "type": "string",
+      "enum": [
+        "string",
+        "integer",
+        "number",
+        "boolean"
+      ],
+      "description": "JSON scalar type of a plugin setting (rendered by Admin)."
+    },
+    "ThemeContribution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false,
+      "description": "A theme contributed as token JSON only (no code)."
+    },
+    "SlotRef": {
+      "type": "object",
+      "properties": {
+        "slot": {
+          "type": "string",
+          "description": "The slot name, one of the `SLOTS` ids, e.g. \"issues\"."
+        },
+        "version": {
+          "type": "number",
+          "description": "Integer slot version; the host resolves provider/consumer by exact equality."
+        }
+      },
+      "required": [
+        "slot",
+        "version"
+      ],
+      "additionalProperties": false,
+      "description": "A named, versioned slot this plugin provides or consumes."
+    },
+    "EnvVar": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string",
+          "description": "Anchored regex the value must match, e.g. \"^[0-9]+$\"."
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "secret": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "key"
+      ],
+      "additionalProperties": false,
+      "description": "A declared environment variable (field names shared verbatim with the discord-bot index)."
+    }
+  }
+}

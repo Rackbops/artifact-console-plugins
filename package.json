@@ -1,0 +1,27 @@
+{
+  "name": "artifact-console-plugins",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@12.4.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "generate-index": "node scripts/generate-index.mjs",
+    "check-contract": "node scripts/check-contract.mjs",
+    "check-bundles": "node scripts/check-bundles.mjs",
+    "test": "vitest run",
+    "check": "pnpm -r build && node scripts/generate-index.mjs --check && node scripts/check-contract.mjs && node scripts/check-bundles.mjs && biome check . && pnpm -r typecheck && pnpm -r test && vitest run"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "@rackbops/ac-plugin-contract": "catalog:",
+    "@types/node": "catalog:",
+    "ajv": "^8.17.1",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
