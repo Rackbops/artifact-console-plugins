@@ -89,6 +89,28 @@ test("fails when hostApiVersion differs from HOST_API_VERSION", () => {
   expect(errors.some((e) => e.includes("hostApiVersion is 99"))).toBe(true)
 })
 
+test("fails loudly (never silently skips the hostApiVersion check) when version.js can't be parsed", () => {
+  // Regression: readHostApiVersion used to return undefined on any read/regex failure, and the
+  // caller only compared hostApiVersion "if (hostApiVersion !== undefined ...)" -- so an unparseable
+  // version.js silently disabled the hostApiVersion check for EVERY plugin instead of failing.
+  const root = fixtureRoot()
+  writeFileSync(
+    join(root, "node_modules/@rackbops/ac-plugin-contract/dist/version.js"),
+    "export const SOMETHING_ELSE = 1\n",
+  )
+  // A manifest with a hostApiVersion that would be wrong under the real HOST_API_VERSION (1) --
+  // this must still be reported as an error, not silently accepted because the version read failed.
+  writeManifest(root, "widget", {
+    id: "widget",
+    hostApiVersion: 99,
+    kind: "in-process",
+    server: "dist/server.js",
+  })
+  const { ok, errors } = checkContract(root)
+  expect(ok).toBe(false)
+  expect(errors.some((e) => e.includes("could not read HOST_API_VERSION"))).toBe(true)
+})
+
 // ---- the real repo -------------------------------------------------------------------------------
 
 test("check-contract passes against the real repo", () => {

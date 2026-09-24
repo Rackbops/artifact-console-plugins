@@ -19,6 +19,11 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # Least-privilege default for a public repo: this job holds no secrets and never writes, but an
+    # explicit read-only grant is the hygiene rule rather than relying on the org/repo default token
+    # scope, which could later be widened for another workflow and silently loosen this one too.
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 

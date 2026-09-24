@@ -37,6 +37,10 @@ for (const file of workflowFiles) {
   })
 }
 
+test("ci.yml's job grants only read-only contents permission (least privilege on a public repo)", () => {
+  expect(code("ci.yml")).toMatch(/permissions:\s*\n\s*contents:\s*read/)
+})
+
 for (const file of ["ci.yml", "publish.yml"]) {
   test(`${file}: every job's runs-on is ubuntu-latest`, () => {
     const text = read(file)

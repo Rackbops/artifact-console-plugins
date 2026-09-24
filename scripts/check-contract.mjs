@@ -48,6 +48,13 @@ export function checkContract(root) {
   const validate = ajv.compile(schema)
 
   const hostApiVersion = readHostApiVersion(root)
+  if (hostApiVersion === undefined) {
+    errors.push(
+      "could not read HOST_API_VERSION from " +
+        "node_modules/@rackbops/ac-plugin-contract/dist/version.js -- refusing to silently skip " +
+        "every plugin's hostApiVersion check",
+    )
+  }
 
   const pluginsDir = join(root, "plugins")
   const dirs = existsSync(pluginsDir) ? readdirSync(pluginsDir, { withFileTypes: true }) : []

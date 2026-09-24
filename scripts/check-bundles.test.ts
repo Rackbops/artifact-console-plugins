@@ -40,14 +40,26 @@ function writePlugin(
   return pluginDir
 }
 
-test("extractSpecifiers finds from-clause, bare, and dynamic imports", () => {
+test("extractSpecifiers finds from-clause, bare, dynamic, and require() imports", () => {
   const text = [
     'import { x } from "./x.js"',
     'export { y } from "node:fs"',
     'import "./side-effect.js"',
     'const m = await import("react")',
+    'const z = require("left-pad")',
   ].join("\n")
-  expect(extractSpecifiers(text)).toEqual(["./x.js", "node:fs", "./side-effect.js", "react"])
+  expect(extractSpecifiers(text)).toEqual([
+    "./x.js",
+    "node:fs",
+    "./side-effect.js",
+    "react",
+    "left-pad",
+  ])
+})
+
+test("extractSpecifiers finds a from-clause import wrapped across multiple lines", () => {
+  const text = 'import {\n  a,\n  b,\n} from "left-pad"\n'
+  expect(extractSpecifiers(text)).toEqual(["left-pad"])
 })
 
 test("fails when server.js imports a bare package", () => {
@@ -90,6 +102,59 @@ test("passes a frontend bundle using only import-map specifiers", () => {
   writePlugin(root, "widget", {
     frontend: 'import { useEffect } from "react"\nimport { fetch } from "@ac/host"\n',
   })
+  const { ok, errors } = checkBundles(root)
+  expect(errors).toEqual([])
+  expect(ok).toBe(true)
+})
+
+test("fails when a HELPER file (transitively relative-imported) imports a bare package", () => {
+  // Regression: the check used to only scan the entry file, so a bare import smuggled through a
+  // relative-imported helper module slipped through undetected.
+  const root = fixtureRoot()
+  const pluginDir = writePlugin(root, "widget", {
+    server: 'import { helper } from "./helper.js"\n',
+  })
+  writeFileSync(join(pluginDir, "dist/helper.js"), 'import leftPad from "left-pad"\nexport {}\n')
+  const { ok, errors } = checkBundles(root)
+  expect(ok).toBe(false)
+  expect(errors.some((e) => e.includes('imports "left-pad"'))).toBe(true)
+})
+
+test("fails when a relative import escapes to a sibling dir sharing dist/'s name as a prefix", () => {
+  // Regression: `resolved.startsWith(distRoot)` (a bare string-prefix compare, no trailing
+  // separator) let "../dist-secret/evil.js" through, since ".../widget/dist-secret/evil.js"
+  // starts with the string ".../widget/dist" even though it is NOT under dist/ at all.
+  const root = fixtureRoot()
+  const pluginDir = writePlugin(root, "widget", {
+    server: 'import { evil } from "../dist-secret/evil.js"\n',
+  })
+  mkdirSync(join(root, "plugins/dist-secret"), { recursive: true })
+  writeFileSync(join(root, "plugins/dist-secret/evil.js"), "export const evil = 1\n")
+  const { ok, errors } = checkBundles(root)
+  expect(ok).toBe(false)
+  expect(errors.some((e) => e.includes("does not resolve to a"))).toBe(true)
+  void pluginDir
+})
+
+test("passes a transitive chain of relative-imported helpers that all resolve under dist/", () => {
+  const root = fixtureRoot()
+  const pluginDir = writePlugin(root, "widget", {
+    server: 'import { a } from "./a.js"\n',
+  })
+  writeFileSync(join(pluginDir, "dist/a.js"), 'import { b } from "./b.js"\nexport const a = b\n')
+  writeFileSync(join(pluginDir, "dist/b.js"), "export const b = 1\n")
+  const { ok, errors } = checkBundles(root)
+  expect(errors).toEqual([])
+  expect(ok).toBe(true)
+})
+
+test("a cyclic pair of relative-imported helpers terminates instead of looping forever", () => {
+  const root = fixtureRoot()
+  const pluginDir = writePlugin(root, "widget", {
+    server: 'import { a } from "./a.js"\n',
+  })
+  writeFileSync(join(pluginDir, "dist/a.js"), 'import { b } from "./b.js"\nexport const a = 1\n')
+  writeFileSync(join(pluginDir, "dist/b.js"), 'import { a } from "./a.js"\nexport const b = 1\n')
   const { ok, errors } = checkBundles(root)
   expect(errors).toEqual([])
   expect(ok).toBe(true)
