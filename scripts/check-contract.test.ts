@@ -56,8 +56,13 @@ test("passes when the vendored schema is byte-identical and manifests are valid"
 })
 
 test("fails on a one-byte change to the vendored schema", () => {
+  // Flips one character rather than appending -- same LENGTH as the real schema, so this only
+  // fails a real byte-for-byte compare, never a "compare lengths instead" stand-in for one.
+  const flipped = `${REAL_SCHEMA.slice(0, -2)}${REAL_SCHEMA.at(-2) === "}" ? "{" : "}"}${REAL_SCHEMA.slice(-1)}`
+  expect(flipped.length).toBe(REAL_SCHEMA.length)
+  expect(flipped).not.toBe(REAL_SCHEMA)
   const root = fixtureRoot()
-  writeFileSync(join(root, "vendor/ac-plugin-contract/schema.json"), `${REAL_SCHEMA} `)
+  writeFileSync(join(root, "vendor/ac-plugin-contract/schema.json"), flipped)
   const { ok, errors } = checkContract(root)
   expect(ok).toBe(false)
   expect(errors.some((e) => e.includes("has drifted from"))).toBe(true)
