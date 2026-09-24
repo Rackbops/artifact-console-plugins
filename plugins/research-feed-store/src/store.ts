@@ -1,6 +1,6 @@
-import { DatabaseSync } from "node:sqlite"
 import { mkdirSync } from "node:fs"
 import { dirname } from "node:path"
+import { DatabaseSync } from "node:sqlite"
 
 /**
  * The local SQLite mirror of the research-triage machine feed (#453 decision 6/9). One table,
@@ -194,9 +194,7 @@ export class Store {
   }
 
   byId(id: string): StoredGrading | undefined {
-    const row = this.#db.prepare("SELECT * FROM gradings WHERE id = ?").get(id) as
-      | Row
-      | undefined
+    const row = this.#db.prepare("SELECT * FROM gradings WHERE id = ?").get(id) as Row | undefined
     return row ? rowToGrading(row) : undefined
   }
 
@@ -213,9 +211,7 @@ export class Store {
   /** Every grading, newest first, capped at `limit`. */
   history(limit: number): StoredGrading[] {
     const rows = this.#db
-      .prepare(
-        "SELECT * FROM gradings ORDER BY graded_at DESC, CAST(cursor AS REAL) DESC LIMIT ?",
-      )
+      .prepare("SELECT * FROM gradings ORDER BY graded_at DESC, CAST(cursor AS REAL) DESC LIMIT ?")
       .all(limit) as unknown as Row[]
     return rows.map(rowToGrading)
   }
@@ -247,7 +243,9 @@ export class Store {
 
   #setMeta(key: string, value: string): void {
     this.#db
-      .prepare("INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+      .prepare(
+        "INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      )
       .run(key, value)
   }
 }

@@ -88,3 +88,46 @@ test("push-notify.yml passes runner ubuntu-latest and the secret explicitly", ()
 test("ci.yml has no fork guard (it holds no secrets)", () => {
   expect(read("ci.yml")).not.toMatch(/github\.repository ==/)
 })
+
+// research-feed-store (#453): the sidecar-smoke job builds (never pushes) a container image and
+// drives it against scripts/feed-stub.mjs; publish.yml's Dockerfile branch is the only place that
+// ever pushes one, and only from a release tag.
+
+test("ci.yml's sidecar-smoke job runs on ubuntu-latest and never pushes an image", () => {
+  const text = read("ci.yml")
+  expect(text).toMatch(/sidecar-smoke:\s*\n\s*runs-on:\s*ubuntu-latest/)
+  // The job's own docker build step has no --push/-o type=registry, and issues no `docker push`.
+  const jobStart = text.indexOf("sidecar-smoke:")
+  const job = text.slice(jobStart)
+  expect(job).toMatch(/docker build/)
+  expect(job).not.toMatch(/docker push/)
+  expect(job).not.toMatch(/--push/)
+})
+
+test("publish.yml grants packages: write only to the publish job (job-level, not workflow-level)", () => {
+  const text = code("publish.yml")
+  expect(text).not.toMatch(/^permissions:/m) // still no top-level (workflow-wide) permissions block
+  expect(text).toMatch(
+    /permissions:\s*\n\s*contents:\s*write\s*\n\s*id-token:\s*write\s*\n\s*packages:\s*write/,
+  )
+})
+
+test("publish.yml's image push runs only when the plugin has a Dockerfile", () => {
+  const text = read("publish.yml")
+  expect(text).toMatch(/if \[ -f "plugins\/\$\{NAME\}\/Dockerfile" \]/)
+  const pushStepIdx = text.indexOf("Build and push the sidecar image")
+  expect(pushStepIdx).toBeGreaterThan(-1)
+  const pushStep = text.slice(pushStepIdx, pushStepIdx + 400)
+  expect(pushStep).toMatch(/if:\s*steps\.sidecar\.outputs\.has-dockerfile == 'true'/)
+  expect(pushStep).toMatch(/platforms:\s*linux\/amd64/)
+  // No :latest tag -- a deploy always pins the exact published version.
+  expect(pushStep).not.toMatch(/:latest/)
+})
+
+test("publish.yml's sidecar image push authenticates with the job's own GITHUB_TOKEN, not a separate registry secret", () => {
+  const text = read("publish.yml")
+  const loginIdx = text.indexOf("Log in to ghcr.io")
+  expect(loginIdx).toBeGreaterThan(-1)
+  const loginStep = text.slice(loginIdx, loginIdx + 300)
+  expect(loginStep).toMatch(/password:\s*\$\{\{\s*secrets\.GITHUB_TOKEN\s*\}\}/)
+})

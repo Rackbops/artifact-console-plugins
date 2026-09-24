@@ -5,6 +5,10 @@ export function fetch(_path: string, _init?: RequestInit): Promise<Response> {
   throw new Error('ac-host.stub: fetch was not mocked -- call vi.mock("@ac/host", ...) first')
 }
 
-export function cached(_path: string, _init?: RequestInit, _opts?: { ttlMs?: number }): Promise<Response> {
+export function cached(
+  _path: string,
+  _init?: RequestInit,
+  _opts?: { ttlMs?: number },
+): Promise<Response> {
   throw new Error('ac-host.stub: cached was not mocked -- call vi.mock("@ac/host", ...) first')
 }

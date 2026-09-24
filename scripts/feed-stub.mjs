@@ -41,7 +41,8 @@ export function createFeedStub(opts = {}) {
   const token = opts.token ?? process.env.FEED_STUB_TOKEN ?? "rtf_stub_token"
   const requireAccess = opts.requireAccess ?? process.env.FEED_STUB_REQUIRE_ACCESS === "1"
   const cfClientId = opts.cfClientId ?? process.env.FEED_STUB_CF_CLIENT_ID ?? "stub-cf-id"
-  const cfClientSecret = opts.cfClientSecret ?? process.env.FEED_STUB_CF_CLIENT_SECRET ?? "stub-cf-secret"
+  const cfClientSecret =
+    opts.cfClientSecret ?? process.env.FEED_STUB_CF_CLIENT_SECRET ?? "stub-cf-secret"
 
   /** @type {Array<Record<string, unknown>>} */
   const gradings = []
@@ -87,7 +88,9 @@ export function createFeedStub(opts = {}) {
       .sort((a, b) => Number(a.cursor) - Number(b.cursor))
       .slice(0, limit)
     const nextCursorValue =
-      matching.length > 0 ? matching[matching.length - 1].cursor : url.searchParams.get("since") ?? "0"
+      matching.length > 0
+        ? matching[matching.length - 1].cursor
+        : (url.searchParams.get("since") ?? "0")
     return sendJson(res, 200, { items: matching, nextCursor: nextCursorValue })
   }
 
@@ -142,7 +145,8 @@ export function createFeedStub(opts = {}) {
       const url = new URL(req.url ?? "/", "http://internal")
       try {
         if (url.pathname === "/__add" && req.method === "POST") return await handleAdd(req, res)
-        if (url.pathname === "/__correct" && req.method === "POST") return await handleCorrect(req, res)
+        if (url.pathname === "/__correct" && req.method === "POST")
+          return await handleCorrect(req, res)
 
         if (!isAuthorized(req)) return sendJson(res, 401, { error: "unauthorized" })
 

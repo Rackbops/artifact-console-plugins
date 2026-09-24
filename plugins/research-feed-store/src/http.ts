@@ -105,7 +105,9 @@ async function submitToFeed(
   }
 }
 
-export function createHandler(deps: HandlerDeps): (req: IncomingMessage, res: ServerResponse) => void {
+export function createHandler(
+  deps: HandlerDeps,
+): (req: IncomingMessage, res: ServerResponse) => void {
   return (req, res) => {
     void handle(req, res, deps).catch((err) => {
       const status = (err as { statusCode?: number }).statusCode ?? 500
@@ -129,7 +131,10 @@ async function handle(req: IncomingMessage, res: ServerResponse, deps: HandlerDe
     const watchLiveRaw = searchParams.get("watchLive")
     const watchLive = watchLiveRaw === null ? undefined : watchLiveRaw === "true"
     const limit = parseLimit(searchParams)
-    return sendJson(res, 200, { ok: true, verdicts: store.latestPerUrl({ verdict, watchLive, limit }) })
+    return sendJson(res, 200, {
+      ok: true,
+      verdicts: store.latestPerUrl({ verdict, watchLive, limit }),
+    })
   }
 
   const verdictIdMatch = /^\/verdicts\/([^/]+)$/.exec(pathname)

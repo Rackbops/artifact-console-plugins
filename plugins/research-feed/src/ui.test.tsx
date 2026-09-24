@@ -28,7 +28,9 @@ test("the panel shows the empty state when status is unavailable", async () => {
   render(<ResearchFeedPanel />)
   await waitFor(() =>
     expect(
-      screen.getByText("Research feed unavailable: the research-feed-store sidecar isn't reachable"),
+      screen.getByText(
+        "Research feed unavailable: the research-feed-store sidecar isn't reachable",
+      ),
     ).toBeTruthy(),
   )
   expect(screen.getByText("connect ECONNREFUSED")).toBeTruthy()
@@ -116,8 +118,8 @@ test("submitting a url posts it and shows the confirmation", async () => {
     expect(screen.getByText("Submitted -- it appears after the next poll")).toBeTruthy(),
   )
   const call = hostFetch.mock.calls.find(([path]) => path === "/api/x/research-feed/submit")
-  expect(call).toBeDefined()
-  expect(JSON.parse((call?.[1] as RequestInit).body as string)).toEqual({
+  if (!call) throw new Error("submit was never called")
+  expect(JSON.parse((call[1] as RequestInit).body as string)).toEqual({
     url: "https://example.com/new",
   })
 })
@@ -150,7 +152,9 @@ test("the card shows the empty state when unavailable", async () => {
   render(<ResearchFeedCard />)
   await waitFor(() =>
     expect(
-      screen.getByText("Research feed unavailable: the research-feed-store sidecar isn't reachable"),
+      screen.getByText(
+        "Research feed unavailable: the research-feed-store sidecar isn't reachable",
+      ),
     ).toBeTruthy(),
   )
 })

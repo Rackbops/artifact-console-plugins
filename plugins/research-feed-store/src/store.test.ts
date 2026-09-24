@@ -2,11 +2,24 @@ import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, expect, test } from "vitest"
-import type { FeedItem } from "./store.js"
+import type { FeedItem, Store } from "./store.js"
 import { openStore } from "./store.js"
 
 const dirs: string[] = []
+const stores: Store[] = []
 afterEach(() => {
+  // node:sqlite (WAL mode) keeps the db file open until Store#close() runs; an open handle makes
+  // Windows' rmSync fail with EPERM even with force: true, so every store a test opened (via the
+  // tracked openTrackedStore below) must close before its temp dir is removed. A test calling the
+  // real openStore directly and closing it itself (e.g. the reopen test) is unaffected -- this only
+  // closes stores THIS file opened and didn't already close.
+  for (const store of stores.splice(0)) {
+    try {
+      store.close()
+    } catch {
+      // already closed by the test itself
+    }
+  }
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
 })
 
@@ -14,6 +27,14 @@ function tempDbPath(): string {
   const dir = mkdtempSync(join(tmpdir(), "research-feed-store-"))
   dirs.push(dir)
   return join(dir, "sub", "research-feed.db")
+}
+
+/** openStore, tracked for an automatic close in afterEach -- use this in any test that doesn't
+ *  already call store.close() itself. */
+function openTrackedStore(path: string): Store {
+  const store = openStore(path)
+  stores.push(store)
+  return store
 }
 
 function item(overrides: Partial<FeedItem> = {}): FeedItem {
@@ -90,12 +111,27 @@ test("a page that fails mid-transaction leaves the cursor unchanged", () => {
 })
 
 test("/verdicts (latestPerUrl) returns the latest grading per url", () => {
-  const store = openStore(tempDbPath())
+  const store = openTrackedStore(tempDbPath())
   store.applyPage(
     [
-      item({ id: "g1", url: "https://example.com/a", gradedAt: "2026-09-01T00:00:00.000Z", cursor: "1" }),
-      item({ id: "g2", url: "https://example.com/a", gradedAt: "2026-09-02T00:00:00.000Z", cursor: "2" }),
-      item({ id: "g3", url: "https://example.com/b", gradedAt: "2026-09-01T00:00:00.000Z", cursor: "3" }),
+      item({
+        id: "g1",
+        url: "https://example.com/a",
+        gradedAt: "2026-09-01T00:00:00.000Z",
+        cursor: "1",
+      }),
+      item({
+        id: "g2",
+        url: "https://example.com/a",
+        gradedAt: "2026-09-02T00:00:00.000Z",
+        cursor: "2",
+      }),
+      item({
+        id: "g3",
+        url: "https://example.com/b",
+        gradedAt: "2026-09-01T00:00:00.000Z",
+        cursor: "3",
+      }),
     ],
     "4",
   )
@@ -104,7 +140,7 @@ test("/verdicts (latestPerUrl) returns the latest grading per url", () => {
 })
 
 test("latestPerUrl filters by verdict and watchLive", () => {
-  const store = openStore(tempDbPath())
+  const store = openTrackedStore(tempDbPath())
   store.applyPage(
     [
       item({ id: "g1", url: "https://example.com/a", verdict: "keep", watchLive: true }),
@@ -118,11 +154,21 @@ test("latestPerUrl filters by verdict and watchLive", () => {
 })
 
 test("historyFor (via /verdicts/:id) includes every grading sharing its url, newest first", () => {
-  const store = openStore(tempDbPath())
+  const store = openTrackedStore(tempDbPath())
   store.applyPage(
     [
-      item({ id: "g1", url: "https://example.com/a", gradedAt: "2026-09-01T00:00:00.000Z", cursor: "1" }),
-      item({ id: "g2", url: "https://example.com/a", gradedAt: "2026-09-02T00:00:00.000Z", cursor: "2" }),
+      item({
+        id: "g1",
+        url: "https://example.com/a",
+        gradedAt: "2026-09-01T00:00:00.000Z",
+        cursor: "1",
+      }),
+      item({
+        id: "g2",
+        url: "https://example.com/a",
+        gradedAt: "2026-09-02T00:00:00.000Z",
+        cursor: "2",
+      }),
     ],
     "3",
   )
@@ -131,7 +177,7 @@ test("historyFor (via /verdicts/:id) includes every grading sharing its url, new
 })
 
 test("byId for an unknown id returns undefined", () => {
-  const store = openStore(tempDbPath())
+  const store = openTrackedStore(tempDbPath())
   expect(store.byId("nope")).toBeUndefined()
 })
 

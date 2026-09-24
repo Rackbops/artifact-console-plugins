@@ -97,7 +97,10 @@ test("a sidecar timeout or connection error answers 503 with available false", a
 })
 
 test("/verdicts passes verdict, watchLive and limit through and nothing else", async () => {
-  fetchMock.mockResolvedValue({ status: 200, text: async () => JSON.stringify({ ok: true, verdicts: [] }) })
+  fetchMock.mockResolvedValue({
+    status: 200,
+    text: async () => JSON.stringify({ ok: true, verdicts: [] }),
+  })
   const { host, routes } = fakeHost("http://research-feed-store:8000")
   createPlugin(host).activate()
   await findRoute(routes, "GET", "/verdicts").handler(
@@ -132,7 +135,10 @@ test("GET /verdicts/:id proxies to the sidecar's /verdicts/<id>", async () => {
 })
 
 test("GET /history forwards only limit", async () => {
-  fetchMock.mockResolvedValue({ status: 200, text: async () => JSON.stringify({ ok: true, history: [] }) })
+  fetchMock.mockResolvedValue({
+    status: 200,
+    text: async () => JSON.stringify({ ok: true, history: [] }),
+  })
   const { host, routes } = fakeHost("http://research-feed-store:8000")
   createPlugin(host).activate()
   await findRoute(routes, "GET", "/history").handler(
@@ -163,7 +169,10 @@ test("POST /submit with no url is a 400 and never calls the sidecar", async () =
   const { host, routes } = fakeHost()
   createPlugin(host).activate()
   const res = await findRoute(routes, "POST", "/submit").handler(
-    new Request("http://x/api/x/research-feed/submit", { method: "POST", body: JSON.stringify({}) }),
+    new Request("http://x/api/x/research-feed/submit", {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
   )
   expect(res.status).toBe(400)
   expect(fetchMock).not.toHaveBeenCalled()

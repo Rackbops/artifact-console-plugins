@@ -41,7 +41,9 @@ test("pollOnce sends the bearer and both CF-Access headers when set", async () =
   const store = openStore(tempDbPath())
   const fetchFn = vi.fn().mockResolvedValue(jsonResponse({ items: [], nextCursor: "0" }))
   await pollOnce(config, store, fetchFn)
-  const headers = (fetchFn.mock.calls[0]?.[1] as RequestInit).headers as Record<string, string>
+  const call = fetchFn.mock.calls[0]
+  if (!call) throw new Error("fetchFn was never called")
+  const headers = (call[1] as RequestInit).headers as Record<string, string>
   expect(headers.Authorization).toBe("Bearer rtf_x")
   expect(headers["CF-Access-Client-Id"]).toBe("cid")
   expect(headers["CF-Access-Client-Secret"]).toBe("csecret")
@@ -53,7 +55,9 @@ test("pollOnce sends only the bearer when CF-Access credentials are unset", asyn
   const store = openStore(tempDbPath())
   const fetchFn = vi.fn().mockResolvedValue(jsonResponse({ items: [], nextCursor: "0" }))
   await pollOnce(config, store, fetchFn)
-  const headers = (fetchFn.mock.calls[0]?.[1] as RequestInit).headers as Record<string, string>
+  const call = fetchFn.mock.calls[0]
+  if (!call) throw new Error("fetchFn was never called")
+  const headers = (call[1] as RequestInit).headers as Record<string, string>
   expect(headers.Authorization).toBe("Bearer rtf_x")
   expect(headers["CF-Access-Client-Id"]).toBeUndefined()
   store.close()

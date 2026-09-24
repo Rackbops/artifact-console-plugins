@@ -42,7 +42,8 @@ const VERDICT_LABELS: Record<string, string> = {
   drop: "Drop",
 }
 
-const UNAVAILABLE_MESSAGE = "Research feed unavailable: the research-feed-store sidecar isn't reachable"
+const UNAVAILABLE_MESSAGE =
+  "Research feed unavailable: the research-feed-store sidecar isn't reachable"
 
 function isUnavailable(status: StatusBody | null): boolean {
   return status !== null && status.available === false
@@ -79,7 +80,10 @@ export function ResearchFeedPanel() {
   const [submitResult, setSubmitResult] = useState<string | null>(null)
 
   useEffect(() => {
-    if (isUnavailable(status)) return
+    // Wait until status has actually loaded (not just "not yet known to be unavailable") -- status
+    // starts null, and isUnavailable(null) is false, so gating on that alone fires this effect a
+    // second, premature time on mount before useStatus's own fetch has resolved.
+    if (status === null || isUnavailable(status)) return
     const params = new URLSearchParams()
     if (verdictFilter) params.set("verdict", verdictFilter)
     if (watchLiveOnly) params.set("watchLive", "true")
@@ -147,7 +151,7 @@ export function ResearchFeedPanel() {
   return (
     <div>
       <h1>Research</h1>
-      <div role="group" aria-label="verdict filter">
+      <fieldset aria-label="verdict filter">
         {["", "keep", "grey_area", "drop"].map((v) => (
           <button
             key={v || "all"}
@@ -158,7 +162,7 @@ export function ResearchFeedPanel() {
             {v === "" ? "All" : (VERDICT_LABELS[v] ?? v)}
           </button>
         ))}
-      </div>
+      </fieldset>
       <label>
         <input
           type="checkbox"
@@ -240,7 +244,8 @@ export function ResearchFeedCard() {
   }, [])
 
   useEffect(() => {
-    if (isUnavailable(status)) return
+    // Same "wait for status to actually load" rule as the panel's own effect -- see its comment.
+    if (status === null || isUnavailable(status)) return
     let cancelled = false
     cached("/api/x/research-feed/verdicts?limit=5")
       .then((res) => res.json())

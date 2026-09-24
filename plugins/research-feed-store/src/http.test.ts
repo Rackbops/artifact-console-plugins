@@ -1,5 +1,5 @@
-import { type Server, createServer } from "node:http"
 import { mkdtempSync, rmSync } from "node:fs"
+import { createServer, type Server } from "node:http"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, expect, test, vi } from "vitest"
@@ -10,9 +10,14 @@ import { openStore } from "./store.js"
 
 const dirs: string[] = []
 const servers: Server[] = []
+const stores: Store[] = []
 afterEach(() => {
-  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
+  // Order matters on Windows: node:sqlite (WAL mode) keeps the db file open until Store#close()
+  // runs, and an open handle makes the directory's rmSync fail with EPERM even with force: true --
+  // so every store this test opened must close before its temp dir is removed.
   for (const server of servers.splice(0)) server.close()
+  for (const store of stores.splice(0)) store.close()
+  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
 })
 
 function tempDbPath(): string {
@@ -28,6 +33,7 @@ async function startServer(opts: {
   triggerPoll?: () => Promise<unknown>
 }): Promise<{ url: string; store: Store }> {
   const store = opts.store ?? openStore(tempDbPath())
+  stores.push(store)
   const config = opts.config ?? readConfig({})
   const handler = createHandler({
     store,
@@ -53,7 +59,7 @@ test("/healthz is 200 while the feed is unreachable", async () => {
   })
   const res = await fetch(`${url}/healthz`)
   expect(res.status).toBe(200)
-  const body = await res.json()
+  const body = (await res.json()) as { ok: boolean; feed: { state: string }; mirrored: number }
   expect(body.ok).toBe(true)
   expect(body.feed.state).toBe("unreachable")
   expect(body.mirrored).toBe(0)
@@ -80,20 +86,38 @@ test("/verdicts/:id includes every grading sharing its url, newest first", async
   }
   store.applyPage(
     [
-      { ...base, id: "g1", url: "https://example.com/a", cursor: "1", gradedAt: "2026-09-01T00:00:00.000Z" },
-      { ...base, id: "g2", url: "https://example.com/a", cursor: "2", gradedAt: "2026-09-02T00:00:00.000Z" },
+      {
+        ...base,
+        id: "g1",
+        url: "https://example.com/a",
+        cursor: "1",
+        gradedAt: "2026-09-01T00:00:00.000Z",
+      },
+      {
+        ...base,
+        id: "g2",
+        url: "https://example.com/a",
+        cursor: "2",
+        gradedAt: "2026-09-02T00:00:00.000Z",
+      },
     ],
     "3",
   )
   const res = await fetch(`${url}/verdicts/g2`)
   expect(res.status).toBe(200)
-  const body = await res.json()
+  const body = (await res.json()) as {
+    verdict: { id: string }
+    history: { id: string }[]
+  }
   expect(body.verdict.id).toBe("g2")
-  expect(body.history.map((g: { id: string }) => g.id)).toEqual(["g2", "g1"])
+  expect(body.history.map((g) => g.id)).toEqual(["g2", "g1"])
 })
 
 test("/submit relays the upstream status and body", async () => {
-  const config = readConfig({ RESEARCH_FEED_URL: "https://rt.example", RESEARCH_FEED_TOKEN: "rtf_x" })
+  const config = readConfig({
+    RESEARCH_FEED_URL: "https://rt.example",
+    RESEARCH_FEED_TOKEN: "rtf_x",
+  })
   const fetchFn = vi.fn().mockResolvedValue({
     status: 202,
     text: async () => JSON.stringify({ accepted: true }),
@@ -123,7 +147,10 @@ test("/submit is 503 when unconfigured, never 502 or 504", async () => {
 })
 
 test("/submit is 503 when the feed is unreachable, never 502 or 504", async () => {
-  const config = readConfig({ RESEARCH_FEED_URL: "https://rt.example", RESEARCH_FEED_TOKEN: "rtf_x" })
+  const config = readConfig({
+    RESEARCH_FEED_URL: "https://rt.example",
+    RESEARCH_FEED_TOKEN: "rtf_x",
+  })
   const fetchFn = vi.fn().mockRejectedValue(new Error("connect ECONNREFUSED"))
   const { url } = await startServer({ config, fetchFn })
   const res = await fetch(`${url}/submit`, {
@@ -132,7 +159,7 @@ test("/submit is 503 when the feed is unreachable, never 502 or 504", async () =
     body: JSON.stringify({ url: "https://example.com/new" }),
   })
   expect(res.status).toBe(503)
-  const body = await res.json()
+  const body = (await res.json()) as { ok: boolean; error: string }
   expect(body.ok).toBe(false)
   expect(body.error).toMatch(/ECONNREFUSED/)
 })
@@ -157,6 +184,6 @@ test("an unknown route is 404 JSON", async () => {
   const { url } = await startServer({})
   const res = await fetch(`${url}/nonexistent`)
   expect(res.status).toBe(404)
-  const body = await res.json()
+  const body = (await res.json()) as { ok: boolean }
   expect(body.ok).toBe(false)
 })

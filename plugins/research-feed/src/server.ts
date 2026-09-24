@@ -83,7 +83,8 @@ export const createPlugin: CreatePlugin = (host) => ({
     // (plugins/scans's own convention comment).
     host.routes.register("GET", "/verdicts/:id", (request) => {
       const id = parseVerdictId(request.url)
-      if (!id) return Promise.resolve(Response.json({ ok: false, error: "missing id" }, { status: 404 }))
+      if (!id)
+        return Promise.resolve(Response.json({ ok: false, error: "missing id" }, { status: 404 }))
       return proxy(host, "GET", `/verdicts/${encodeURIComponent(id)}`)
     })
 

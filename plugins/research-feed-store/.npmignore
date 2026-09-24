@@ -1,0 +1,8 @@
+# A kind: "sidecar" plugin (#453) ships no dist/ tree on npm at all -- its manifest lives entirely
+# in package.json, and its container app is built and shipped as an image, never installed from
+# npm. `package.json: "files": []` alone does NOT achieve this: npm treats an empty `files` array
+# as if the field were absent and falls back to packing everything not excluded here (verified via
+# `pnpm pack --pack-destination` -- src/, Dockerfile, tsconfig*.json and deploy/ all leaked into the
+# tarball before this file existed). Ignore everything; npm always force-includes package.json,
+# README, CHANGELOG and LICENSE regardless of this file, so those four still ship.
+*

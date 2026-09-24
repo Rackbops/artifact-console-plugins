@@ -44,11 +44,26 @@
         }
       ],
       "routes": [
-        { "method": "GET", "path": "/status" },
-        { "method": "GET", "path": "/verdicts" },
-        { "method": "GET", "path": "/verdicts/:id" },
-        { "method": "GET", "path": "/history" },
-        { "method": "POST", "path": "/submit" }
+        {
+          "method": "GET",
+          "path": "/status"
+        },
+        {
+          "method": "GET",
+          "path": "/verdicts"
+        },
+        {
+          "method": "GET",
+          "path": "/verdicts/:id"
+        },
+        {
+          "method": "GET",
+          "path": "/history"
+        },
+        {
+          "method": "POST",
+          "path": "/submit"
+        }
       ]
     }
   },

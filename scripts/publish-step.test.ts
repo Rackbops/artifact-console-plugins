@@ -199,3 +199,82 @@ test.skipIf(!hasBash)("token auth never passes --provenance, even when public", 
   expect(result.status, result.stderr).toBe(0)
   expect(args).not.toMatch(/--provenance/)
 })
+
+// ---- the "Verify the published tarball..." step: a kind: "sidecar" plugin (#453) --------------
+
+function sidecarFixtureRepo(): string {
+  const dir = mkdtempSync(join(tmpdir(), "publish-step-sidecar-"))
+  dirs.push(dir)
+  const pluginDir = join(dir, "plugins/research-feed-store")
+  mkdirSync(pluginDir, { recursive: true })
+  // A real kind: "sidecar" manifest: no acPlugin.server, no acPlugin.frontend, files: [] -- `npm
+  // pack --dry-run` lists only package.json + whatever npm always includes (README/LICENSE), never
+  // a dist/ tree.
+  writeFileSync(
+    join(pluginDir, "package.json"),
+    JSON.stringify(
+      {
+        name: "@rackbops/ac-plugin-research-feed-store",
+        version: "0.1.0",
+        files: [],
+        acPlugin: {
+          id: "research-feed-store",
+          hostApiVersion: 1,
+          kind: "sidecar",
+          sidecar: { image: "ghcr.io/rackbops/ac-research-feed-store", healthPath: "/healthz" },
+        },
+      },
+      null,
+      2,
+    ),
+  )
+  writeFileSync(join(pluginDir, "README.md"), "# research-feed-store\n")
+  return dir
+}
+
+test.skipIf(!hasBash)(
+  "the tarball-verify step passes a sidecar plugin with no dist/server.js or dist/ui.js at all",
+  () => {
+    const dir = sidecarFixtureRepo()
+    const script = stepRunBody(
+      "Verify the published tarball will carry the declared server/frontend entries",
+    )
+    const result = run(script, dir, { NAME: "research-feed-store" })
+    expect(result.status, result.stderr).toBe(0)
+  },
+)
+
+test.skipIf(!hasBash)(
+  "the tarball-verify step still fails an in-process plugin missing dist/server.js",
+  () => {
+    const dir = mkdtempSync(join(tmpdir(), "publish-step-inprocess-"))
+    dirs.push(dir)
+    const pluginDir = join(dir, "plugins/hello-remote")
+    mkdirSync(pluginDir, { recursive: true })
+    writeFileSync(
+      join(pluginDir, "package.json"),
+      JSON.stringify(
+        {
+          name: "@rackbops/ac-plugin-hello-remote",
+          version: "0.1.0",
+          files: ["dist"],
+          acPlugin: {
+            id: "hello-remote",
+            hostApiVersion: 1,
+            kind: "in-process",
+            server: "dist/server.js",
+          },
+        },
+        null,
+        2,
+      ),
+    )
+    // Deliberately no dist/ directory at all -- the declared entry can never ship.
+    const script = stepRunBody(
+      "Verify the published tarball will carry the declared server/frontend entries",
+    )
+    const result = run(script, dir, { NAME: "hello-remote" })
+    expect(result.status).not.toBe(0)
+    expect(result.stdout + result.stderr).toMatch(/does not list dist\/server\.js/)
+  },
+)

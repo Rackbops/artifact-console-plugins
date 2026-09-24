@@ -36,3 +36,28 @@ jobs:
 
       - name: Check (build + generate-index + check-contract + check-bundles + biome + typecheck + test)
         run: pnpm run check
+
+  # research-feed-store (#453) ships a container image, not an npm dist/ tree -- vitest can prove
+  # the store/poller/http logic, but not a real container restart, a real `docker history`/`docker
+  # inspect`, or a real (if fake) upstream over the network. This job builds the image WITHOUT
+  # pushing it (publish.yml is the only workflow that ever pushes, and only on a release tag) and
+  # drives it with scripts/sidecar-smoke.mjs against scripts/feed-stub.mjs running on the runner.
+  sidecar-smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Build the research-feed-store image (no push)
+        # The sentinel credential is passed only at `docker run` inside sidecar-smoke.mjs, never as
+        # a build ARG here -- the whole point of the smoke's later history/inspect step is proving
+        # the image itself never saw it.
+        run: docker build -t research-feed-store:ci plugins/research-feed-store
+
+      - name: Run the sidecar smoke
+        run: node scripts/sidecar-smoke.mjs research-feed-store:ci

@@ -6,9 +6,9 @@ function env(overrides: Record<string, string | undefined> = {}): NodeJS.Process
 }
 
 test("readConfig rejects a relative db path", () => {
-  expect(() =>
-    readConfig(env({ RESEARCH_FEED_DB: "relative/path.db" })),
-  ).toThrow(/must be an absolute path/)
+  expect(() => readConfig(env({ RESEARCH_FEED_DB: "relative/path.db" }))).toThrow(
+    /must be an absolute path/,
+  )
 })
 
 test("readConfig rejects a poll interval under 30", () => {
@@ -35,12 +35,12 @@ test("readConfig reports unconfigured without RESEARCH_FEED_URL or RESEARCH_FEED
 })
 
 test("readConfig rejects one Access credential set without the other", () => {
-  expect(() =>
-    readConfig(env({ RESEARCH_FEED_ACCESS_CLIENT_ID: "id-only" })),
-  ).toThrow(/must be set together/)
-  expect(() =>
-    readConfig(env({ RESEARCH_FEED_ACCESS_CLIENT_SECRET: "secret-only" })),
-  ).toThrow(/must be set together/)
+  expect(() => readConfig(env({ RESEARCH_FEED_ACCESS_CLIENT_ID: "id-only" }))).toThrow(
+    /must be set together/,
+  )
+  expect(() => readConfig(env({ RESEARCH_FEED_ACCESS_CLIENT_SECRET: "secret-only" }))).toThrow(
+    /must be set together/,
+  )
 })
 
 test("readConfig applies defaults with no env set", () => {
@@ -51,7 +51,9 @@ test("readConfig applies defaults with no env set", () => {
 })
 
 test("feedHeaders sends only the bearer when Access credentials are unset", () => {
-  const config = readConfig(env({ RESEARCH_FEED_URL: "https://rt.example", RESEARCH_FEED_TOKEN: "rtf_x" }))
+  const config = readConfig(
+    env({ RESEARCH_FEED_URL: "https://rt.example", RESEARCH_FEED_TOKEN: "rtf_x" }),
+  )
   expect(feedHeaders(config)).toEqual({ Authorization: "Bearer rtf_x" })
 })
 
