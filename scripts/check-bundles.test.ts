@@ -169,6 +169,26 @@ test("a cyclic pair of relative-imported helpers terminates instead of looping f
   expect(ok).toBe(true)
 })
 
+test("skips a sidecar plugin entirely -- no server/frontend to check", () => {
+  const root = fixtureRoot()
+  const pluginDir = join(root, "plugins", "sidecar-widget")
+  mkdirSync(pluginDir, { recursive: true })
+  writeFileSync(
+    join(pluginDir, "package.json"),
+    JSON.stringify({
+      acPlugin: {
+        id: "sidecar-widget",
+        hostApiVersion: 1,
+        kind: "sidecar",
+        sidecar: { image: "ghcr.io/rackbops/ac-sidecar-widget", healthPath: "/healthz" },
+      },
+    }),
+  )
+  const { ok, errors } = checkBundles(root)
+  expect(ok).toBe(true)
+  expect(errors).toEqual([])
+})
+
 // ---- the real repo: hello-remote's actual built dist -----------------------------------------
 
 test("passes for the real built hello-remote", () => {
