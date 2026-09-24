@@ -122,18 +122,27 @@ test("fails when a HELPER file (transitively relative-imported) imports a bare p
 
 test("fails when a relative import escapes to a sibling dir sharing dist/'s name as a prefix", () => {
   // Regression: `resolved.startsWith(distRoot)` (a bare string-prefix compare, no trailing
-  // separator) let "../dist-secret/evil.js" through, since ".../widget/dist-secret/evil.js"
-  // starts with the string ".../widget/dist" even though it is NOT under dist/ at all.
+  // separator) let "../dist-secret/evil.js" through, since resolving it from
+  // ".../widget/dist/server.js" lands on ".../widget/dist-secret/evil.js" -- a string that starts
+  // with the string ".../widget/dist" even though it is NOT under dist/ at all.
+  //
+  // The escaped file must exist at exactly the path the specifier actually resolves to
+  // (pluginDir/dist-secret/evil.js, one level BELOW pluginDir, a sibling of dist/ itself -- not
+  // pluginDir's own parent) -- otherwise the check fails via the unrelated "file does not exist"
+  // branch instead of the boundary check this test exists to guard, and would pass just as well
+  // against the pre-fix bare-prefix compare (verified: reverting isUnder() to
+  // `resolved.startsWith(distRoot)` here left this exact scenario correctly rejected too, since with
+  // the file missing entirely BOTH branches already fail it -- the assertion never distinguishes
+  // the fix from its absence unless the file genuinely exists at the escaped location).
   const root = fixtureRoot()
   const pluginDir = writePlugin(root, "widget", {
     server: 'import { evil } from "../dist-secret/evil.js"\n',
   })
-  mkdirSync(join(root, "plugins/dist-secret"), { recursive: true })
-  writeFileSync(join(root, "plugins/dist-secret/evil.js"), "export const evil = 1\n")
+  mkdirSync(join(pluginDir, "dist-secret"), { recursive: true })
+  writeFileSync(join(pluginDir, "dist-secret/evil.js"), "export const evil = 1\n")
   const { ok, errors } = checkBundles(root)
   expect(ok).toBe(false)
   expect(errors.some((e) => e.includes("does not resolve to a"))).toBe(true)
-  void pluginDir
 })
 
 test("passes a transitive chain of relative-imported helpers that all resolve under dist/", () => {
