@@ -1,6 +1,6 @@
 {
   "name": "@rackbops/ac-plugin-research-feed-store",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "license": "Apache-2.0",
   "description": "Sidecar that mirrors the research-triage machine feed into local SQLite for artifact-console's research-feed plugin (#453).",

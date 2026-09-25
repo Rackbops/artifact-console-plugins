@@ -1,6 +1,6 @@
 {
   "name": "@rackbops/ac-plugin-hello-remote",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "license": "Apache-2.0",
   "description": "The reference third-party plugin: one panel, one card, GET /ping. Proves the artifact-console-plugins install path (#105).",

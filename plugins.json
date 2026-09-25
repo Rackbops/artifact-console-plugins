@@ -5,10 +5,15 @@
       "host": "artifact-console",
       "name": "hello-remote",
       "package": "@rackbops/ac-plugin-hello-remote",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "hostApiVersion": 1,
       "env": [],
       "releases": [
+        {
+          "version": "0.1.1",
+          "date": "2026-09-25",
+          "notes": "No functional change. The first version CI publishes through the trusted publisher (0.1.0 was the\none-time manual bootstrap npm requires before a trusted publisher can be set)."
+        },
         {
           "version": "0.1.0",
           "date": "2026-09-24",
@@ -20,10 +25,15 @@
       "host": "artifact-console",
       "name": "research-feed",
       "package": "@rackbops/ac-plugin-research-feed",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "hostApiVersion": 1,
       "env": [],
       "releases": [
+        {
+          "version": "0.2.0",
+          "date": "2026-09-25",
+          "notes": "No functional change. The first version CI publishes through the trusted publisher, and the\nupgrade target for the pin-an-older-version check from the console's Admin card (#108, #106)."
+        },
         {
           "version": "0.1.0",
           "date": "2026-09-24",
@@ -35,10 +45,15 @@
       "host": "artifact-console",
       "name": "research-feed-store",
       "package": "@rackbops/ac-plugin-research-feed-store",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "hostApiVersion": 1,
       "env": [],
       "releases": [
+        {
+          "version": "0.1.1",
+          "date": "2026-09-25",
+          "notes": "No functional change. The first version CI publishes: its tag builds and pushes\n`ghcr.io/rackbops/ac-research-feed-store:0.1.1`, the image `deploy/compose.fragment.yaml` pins\n(0.1.0 was the one-time manual npm bootstrap, so no 0.1.0 image exists)."
+        },
         {
           "version": "0.1.0",
           "date": "2026-09-24",

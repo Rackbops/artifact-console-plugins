@@ -1,6 +1,6 @@
 {
   "name": "@rackbops/ac-plugin-research-feed",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "license": "Apache-2.0",
   "description": "Panel + card for the research-feed-store sidecar (#106): browse graded links from the research-triage machine feed, filter by verdict/watch-live, and submit a URL for grading.",
