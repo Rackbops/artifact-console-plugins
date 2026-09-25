@@ -14,8 +14,9 @@ import {
 import { type FormEvent, useEffect, useState } from "react"
 
 /**
- * `plugins/research-feed`'s frontend (#106, decision 10): imports only `react`, `@ac/host` and
- * `@rackbops/ui-react` -- all three import-map externals, so the built `dist/ui.js` stays
+ * `plugins/research-feed`'s frontend (#106, decision 10): imports only `react` (plus the compiler's
+ * `react/jsx-runtime`), `@ac/host` and `@rackbops/ui-react` -- all import-map externals, so the
+ * built `dist/ui.js` stays
  * self-contained (`check-bundles`). Controls and surfaces come from `@rackbops/ui-react`
  * (`Card`/`Button`/`Badge`/`Checkbox`/`Field`/`Alert`/`EmptyState`), themed by the console's
  * `--rb-*` tokens; the scoped `RESEARCH_FEED_CSS` below covers only what those don't (the row
@@ -182,9 +183,9 @@ export function ResearchFeedPanel() {
       <div className="ac-rf">
         <style>{RESEARCH_FEED_CSS}</style>
         <h1 className="ac-rf__title">Research</h1>
-        <EmptyState title={UNAVAILABLE_MESSAGE} level={2}>
+        <Alert variant="warning" title={UNAVAILABLE_MESSAGE}>
           {status?.reason ? <p className="ac-rf__note">{status.reason}</p> : null}
-        </EmptyState>
+        </Alert>
       </div>
     )
   }
@@ -217,7 +218,7 @@ export function ResearchFeedPanel() {
       </div>
 
       {!loaded ? <p className="ac-rf__note">Loading…</p> : null}
-      {loaded && verdicts.length === 0 ? <EmptyState title="No verdicts yet." /> : null}
+      {loaded && verdicts.length === 0 ? <EmptyState title="No verdicts yet." level={2} /> : null}
 
       {verdicts.length > 0 ? (
         <Card>
@@ -347,14 +348,19 @@ export function ResearchFeedCard() {
     }
   }, [status])
 
+  // Never its own heading or its own Card (an EmptyState is one): the console's home-cards wrapper
+  // already renders `<Card><h3>{manifest title}</h3>...` around every card.
   if (isUnavailable(status)) {
-    return <EmptyState title={UNAVAILABLE_MESSAGE} />
+    return (
+      <div className="ac-rf-card">
+        <style>{RESEARCH_FEED_CSS}</style>
+        <p className="ac-rf-card__note">{UNAVAILABLE_MESSAGE}</p>
+      </div>
+    )
   }
 
   const watchLiveCount = verdicts.filter((v) => v.watchLive).length
 
-  // Never its own heading or its own Card: the console's home-cards wrapper already renders
-  // `<Card><h3>{manifest title}</h3>...` around every card.
   return (
     <div className="ac-rf-card">
       <style>{RESEARCH_FEED_CSS}</style>
@@ -388,7 +394,7 @@ export function ResearchFeedCard() {
  *  timeline and the card's compact rows. Colours are the semantic `--rb-*` tokens the console's
  *  `rb-badge--success/warning/danger` resolve to, so a card dot and a panel badge always agree. */
 const RESEARCH_FEED_CSS = `
-.ac-rf { color: var(--rb-text); padding: var(--rb-space-4); display: flex; flex-direction: column; gap: var(--rb-space-3); }
+.ac-rf { color: var(--rb-text); display: flex; flex-direction: column; gap: var(--rb-space-3); }
 .ac-rf__title { margin: 0; }
 .ac-rf__note { color: var(--rb-text-faint); font-size: 12px; margin: 0; }
 .ac-rf__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rb-space-3); }
@@ -397,9 +403,9 @@ const RESEARCH_FEED_CSS = `
 .ac-rf__row { padding: var(--rb-space-3) 0; border-bottom: 1px solid var(--rb-border); display: flex; flex-direction: column; gap: var(--rb-space-1); }
 .ac-rf__row:first-child { padding-top: 0; }
 .ac-rf__row:last-child { border-bottom: 0; padding-bottom: 0; }
-.ac-rf__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--rb-space-2); }
+.ac-rf__head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--rb-space-2); }
 .ac-rf__link { color: var(--rb-accent); font-weight: var(--rb-font-weight-bold, 600); overflow-wrap: anywhere; min-width: 0; }
-.ac-rf__meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--rb-space-2); }
+.ac-rf__meta { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--rb-space-2); }
 .ac-rf__score { font-family: var(--rb-font-mono); font-size: 12px; color: var(--rb-text-soft); }
 .ac-rf__reason { margin: 0; font-size: 12px; color: var(--rb-text-soft); }
 .ac-rf__summary { margin: 0; font-size: var(--rb-text-sm, 13px); color: var(--rb-text-soft); line-height: 1.45; }
@@ -415,6 +421,7 @@ const RESEARCH_FEED_CSS = `
 .ac-rf__submit-row { display: flex; flex-wrap: wrap; gap: var(--rb-space-2); }
 .ac-rf__submit-row .rb-input { flex: 1 1 16rem; min-width: 0; }
 .ac-rf-card__rollup { margin: 0 0 var(--rb-space-2); font-size: 0.85em; color: var(--rb-text-faint); }
+.ac-rf-card__note { margin: 0; font-size: 12px; color: var(--rb-text-faint); }
 .ac-rf-card__rows { list-style: none; margin: 0; padding: 0; }
 .ac-rf-card__row { display: flex; align-items: center; gap: var(--rb-space-2); padding: var(--rb-space-1) 0; font-size: 0.85em; }
 .ac-rf-card__dot { flex: none; width: 0.55em; height: 0.55em; border-radius: 50%; background: var(--rb-text-faint); }

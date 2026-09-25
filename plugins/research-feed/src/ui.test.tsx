@@ -50,6 +50,7 @@ test("the panel shows the empty state when status is unavailable", async () => {
     ).toBeTruthy(),
   )
   expect(screen.getByText("connect ECONNREFUSED")).toBeTruthy()
+  expect(screen.getByRole("alert").className).toContain("rb-alert--warning")
 })
 
 test("the panel filters by verdict and watch-live", async () => {
@@ -317,4 +318,25 @@ test("the card shows the empty state when unavailable", async () => {
       ),
     ).toBeTruthy(),
   )
+})
+
+test("the card's unavailable message is a plain note, never a card inside the wrapper's card", async () => {
+  hostCached.mockResolvedValueOnce(
+    jsonResponse({ ok: false, available: false, reason: "connect ECONNREFUSED" }),
+  )
+  const { container } = render(<ResearchFeedCard />)
+  const note = await screen.findByText(
+    "Research feed unavailable: the research-feed-store sidecar isn't reachable",
+  )
+  expect(note.className).toBe("ac-rf-card__note")
+  expect(container.querySelector(".rb-card")).toBeNull()
+  expect(screen.queryByRole("heading")).toBeNull()
+})
+
+test("an empty feed is a level-2 heading under the panel's h1", async () => {
+  hostFetch
+    .mockResolvedValueOnce(jsonResponse({ ok: true, feed: { state: "ok" } }))
+    .mockResolvedValueOnce(jsonResponse({ ok: true, verdicts: [] }))
+  render(<ResearchFeedPanel />)
+  expect(await screen.findByRole("heading", { level: 2, name: "No verdicts yet." })).toBeTruthy()
 })

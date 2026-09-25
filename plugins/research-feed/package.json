@@ -74,7 +74,7 @@
   },
   "devDependencies": {
     "@rackbops/ac-plugin-contract": "catalog:",
-    "@rackbops/ui-react": "^0.2.42",
+    "@rackbops/ui-react": "0.2.40",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.1.0",
     "@types/node": "catalog:",

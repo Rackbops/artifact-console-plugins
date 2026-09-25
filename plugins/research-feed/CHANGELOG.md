@@ -10,8 +10,10 @@ is a row with a divider, its signal score, a "watch live" badge and reason, and 
 graded. A link's history is an indented timeline. The "Summarise this link" form is a themed
 field and button, with a success or error alert for the result. While the list loads, the panel
 says "Loading…". The Overview card shows a coloured dot per verdict, and each title now links to
-the page. Routes, filters, history, submit and the empty state for an unreachable sidecar behave
-as before.
+the page. Two texts read differently: a correction shows "corrected to" and a verdict badge
+instead of the raw verdict value, and a watch-live reason sits under its badge instead of after
+"watch live:". When the sidecar is unreachable, the panel shows the same message as a warning
+alert. The requests the panel and card make, the filters, history and submit are unchanged.
 
 ## [0.2.0] - 2026-09-25
 
