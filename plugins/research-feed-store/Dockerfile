@@ -11,9 +11,15 @@
 
 FROM node:24-slim AS build
 WORKDIR /app
-COPY package.json tsconfig.build.json ./
-COPY src ./src
+# Deliberately does NOT copy package.json before this install: its devDependencies use pnpm's
+# `catalog:` protocol (resolved only inside the pnpm workspace), which plain npm chokes on
+# (EUNSUPPORTEDPROTOCOL) the moment a package.json naming it is present in the working directory --
+# even for an unrelated `npm install <pkg>@<version>` command. Installing into an empty directory
+# sidesteps that entirely; the runtime stage's own `COPY package.json ./` (below) is unaffected,
+# since nothing ever runs `npm install` there.
 RUN npm install --no-save --no-audit --no-fund typescript@5 @types/node@24
+COPY tsconfig.build.json ./
+COPY src ./src
 RUN npx tsc -p tsconfig.build.json
 
 FROM node:24-slim AS runtime

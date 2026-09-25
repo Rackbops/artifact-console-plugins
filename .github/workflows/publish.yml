@@ -184,7 +184,7 @@ jobs:
       # x86_64); pushed with the job's own GITHUB_TOKEN (packages: write, above) -- no separate
       # registry secret. No `:latest` tag: a deploy's compose fragment always pins the exact version,
       # as ac-pipeline's does (artifact-console's own convention).
-      - name: Check for a Dockerfile (kind: sidecar)
+      - name: Check for a Dockerfile (a kind sidecar plugin)
         id: sidecar
         shell: bash
         env:
