@@ -22,8 +22,9 @@ import { type FormEvent, useEffect, useState } from "react"
  * `--rb-*` tokens; the scoped `RESEARCH_FEED_CSS` below covers only what those don't (the row
  * lists, the history timeline), the same "inject one <style> tag" pattern the console's own core
  * plugins use. `ResearchFeedPanel` at `/research` and `ResearchFeedCard` (sizes `["1x3"]`) both
- * treat `available: false` from `GET .../status` as the empty state -- nothing here can take the
- * console down when the sidecar isn't reachable.
+ * treat `available: false` from `GET .../status` as unavailable and show a message (the panel a
+ * warning alert, the card a plain note) -- nothing here can take the console down when the
+ * sidecar isn't reachable.
  */
 
 interface Correction {
