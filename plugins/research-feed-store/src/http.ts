@@ -88,6 +88,14 @@ async function submitToFeed(
       body: JSON.stringify({ url }),
       signal: controller.signal,
     })
+    // A LITERAL 502/504 from research-triage's own upstream (its Cloudflare Access edge or its own
+    // backend) is a real, resolved HTTP response -- not a thrown fetch error -- so it would
+    // otherwise slip past the catch block below and get relayed verbatim by the /submit handler
+    // (decision 8's "never 502/504" is meant to cover every path out of this sidecar, not just its
+    // own unreachable/unconfigured cases). Treat it exactly like an unreachable feed instead.
+    if (res.status === 502 || res.status === 504) {
+      return { unavailable: true, error: `feed responded ${res.status} for POST /api/feed/submit` }
+    }
     const text = await res.text()
     let body: unknown = {}
     if (text.length > 0) {

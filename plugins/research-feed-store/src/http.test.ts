@@ -135,6 +135,32 @@ test("/submit relays the upstream status and body", async () => {
   expect(JSON.parse(init.body as string)).toEqual({ url: "https://example.com/new" })
 })
 
+test("/submit is 503, never a relayed 502 or 504, when the upstream itself answers 502 or 504", async () => {
+  // A resolved HTTP response, not a thrown fetch error -- research-triage's own Cloudflare Access
+  // edge or backend answering 502/504 is a real, live scenario, and decision 8 ("never 502/504")
+  // has to cover it too, not just an unreachable/unconfigured sidecar.
+  for (const upstreamStatus of [502, 504]) {
+    const config = readConfig({
+      RESEARCH_FEED_URL: "https://rt.example",
+      RESEARCH_FEED_TOKEN: "rtf_x",
+    })
+    const fetchFn = vi.fn().mockResolvedValue({
+      status: upstreamStatus,
+      text: async () => "<html>Bad Gateway</html>",
+    } as Response)
+    const { url } = await startServer({ config, fetchFn })
+    const res = await fetch(`${url}/submit`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: "https://example.com/new" }),
+    })
+    expect(res.status).toBe(503)
+    const body = (await res.json()) as { ok: boolean; error: string }
+    expect(body.ok).toBe(false)
+    expect(body.error).toMatch(new RegExp(String(upstreamStatus)))
+  }
+})
+
 test("/submit is 503 when unconfigured, never 502 or 504", async () => {
   const { url } = await startServer({})
   const res = await fetch(`${url}/submit`, {
