@@ -253,6 +253,9 @@ importers:
       '@rackbops/ac-plugin-contract':
         specifier: 'catalog:'
         version: 2.0.0-alpha.33
+      '@rackbops/ui-react':
+        specifier: 0.2.40
+        version: 0.2.40(react@19.3.0)
       '@testing-library/dom':
         specifier: ^10.4.0
         version: 10.4.2
@@ -497,6 +500,11 @@ packages:
 
   '@rackbops/ac-plugin-contract@2.0.0-alpha.33':
     resolution: {integrity: sha512-AJhaTZNc9FYGu1w64KeGN0dulJqIxzS88Ah7V281UUOkz6Xgkofr3x40ubLAtRvrF4xL1yx3fEKQDMRhfxCobA==}
+
+  '@rackbops/ui-react@0.2.40':
+    resolution: {integrity: sha512-K6CHvR8qeAw5g8GU9XvZctvuu5mN2AA+IXEwmrLgMHlSCzPcM6C6NFKig4nCJYifIWNsFpgh7Nw3YPK78sZp9g==}
+    peerDependencies:
+      react: '>=18'
 
   '@rolldown/binding-android-arm-eabi@1.2.10':
     resolution: {integrity: sha512-bp9svZb+QurZeh+8H4BhrZkifEB0YBNvTVzNSJnJQkj4NrRwmQoDUCGP0vSN7PbvLeM7l1tK6GXL8mrTiH2myg==}
@@ -1382,6 +1390,10 @@ snapshots:
   '@rackbops/ac-plugin-contract@2.0.0-alpha.33':
     dependencies:
       '@octokit/rest': 22.0.1
+
+  '@rackbops/ui-react@0.2.40(react@19.3.0)':
+    dependencies:
+      react: 19.3.0
 
   '@rolldown/binding-android-arm-eabi@1.2.10':
     optional: true

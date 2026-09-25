@@ -25,10 +25,15 @@
       "host": "artifact-console",
       "name": "research-feed",
       "package": "@rackbops/ac-plugin-research-feed",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "hostApiVersion": 1,
       "env": [],
       "releases": [
+        {
+          "version": "0.3.0",
+          "date": "2026-09-25",
+          "notes": "The panel and card now match the console's look: they use `@rackbops/ui-react` (an import-map\nexternal, so `dist/ui.js` stays self-contained) and the console's `--rb-*` theme tokens. Verdicts\nshow as coloured badges in the theme's success, warning and danger colours (Keep, Grey area,\nDrop). The verdict filter is a row of small buttons, with the active one highlighted. Each link\nis a row with a divider, its signal score, a \"watch live\" badge and reason, and when it was\ngraded. A link's history is an indented timeline. The \"Summarise this link\" form is a themed\nfield and button, with a success or error alert for the result. While the list loads, the panel\nsays \"Loading…\". The Overview card shows a coloured dot per verdict, and each title now links to\nthe page. Two texts read differently: a correction shows \"corrected to\" and a verdict badge\ninstead of the raw verdict value, and a watch-live reason sits on its own line below the title\ninstead of after \"watch live:\". When the sidecar is unreachable, the panel shows the same message\nas a warning alert. The requests the panel and card make, the filters, history and submit are\nunchanged."
+        },
         {
           "version": "0.2.0",
           "date": "2026-09-25",
