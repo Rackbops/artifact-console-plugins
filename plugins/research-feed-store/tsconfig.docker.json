@@ -1,0 +1,26 @@
+{
+  "$comment": "The Dockerfile's own build stage, standalone (not `extends`) because the docker build context for this plugin is scoped to this directory alone (both ci.yml's `docker build` and publish.yml's build-push-action pass `plugins/research-feed-store` as the context, never the repo root), so `tsconfig.build.json`'s `extends: \"../../tsconfig.base.json\"` can't reach outside it -- COPYing a path above the build context isn't possible at all. This file's compilerOptions must be kept in sync with tsconfig.base.json + tsconfig.build.json's own overrides; `src/tsconfig-docker-drift.test.ts` fails if they diverge.",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["node"],
+    "rootDir": "src",
+    "outDir": "app"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

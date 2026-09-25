@@ -18,9 +18,13 @@ WORKDIR /app
 # sidesteps that entirely; the runtime stage's own `COPY package.json ./` (below) is unaffected,
 # since nothing ever runs `npm install` there.
 RUN npm install --no-save --no-audit --no-fund typescript@5 @types/node@24
-COPY tsconfig.build.json ./
+# tsconfig.build.json (used by `pnpm -r build` from the repo root) extends ../../tsconfig.base.json
+# -- unreachable from here, since this build's context is scoped to this directory alone. This
+# image builds with its own self-contained tsconfig.docker.json instead (kept in sync with
+# tsconfig.base.json + tsconfig.build.json's own overrides by tsconfig-docker-drift.test.ts).
+COPY tsconfig.docker.json ./
 COPY src ./src
-RUN npx tsc -p tsconfig.build.json
+RUN npx tsc -p tsconfig.docker.json
 
 FROM node:24-slim AS runtime
 WORKDIR /app
