@@ -15,6 +15,36 @@
           "notes": "First release: one panel, one card, `GET /ping`. Proves the third-party install path (#105)."
         }
       ]
+    },
+    {
+      "host": "artifact-console",
+      "name": "research-feed",
+      "package": "@rackbops/ac-plugin-research-feed",
+      "version": "0.1.0",
+      "hostApiVersion": 1,
+      "env": [],
+      "releases": [
+        {
+          "version": "0.1.0",
+          "date": "2026-09-24",
+          "notes": "First release: the `research` panel and `research-feed-card` Overview card, proxying the\n`research-feed-store` sidecar (`host.sidecar.baseUrl`). Browse graded links, filter by\nverdict/watch-live, expand a link's grading history, and submit a URL for grading. Any sidecar\nfailure degrades to the empty state -- the console stays healthy either way (#106)."
+        }
+      ]
+    },
+    {
+      "host": "artifact-console",
+      "name": "research-feed-store",
+      "package": "@rackbops/ac-plugin-research-feed-store",
+      "version": "0.1.0",
+      "hostApiVersion": 1,
+      "env": [],
+      "releases": [
+        {
+          "version": "0.1.0",
+          "date": "2026-09-24",
+          "notes": "First release: mirrors the research-triage machine feed (`GET /api/feed/gradings`) into local\nSQLite, surviving research-triage outages and container restarts. `GET /healthz`,\n`GET /verdicts[?verdict=&watchLive=&limit=]`, `GET /verdicts/:id`, `GET /history[?limit=]`,\n`POST /submit`. Proves the sidecar (`kind: \"sidecar\"`) install path end to end (#453)."
+        }
+      ]
     }
   ]
 }

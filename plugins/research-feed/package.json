@@ -1,0 +1,88 @@
+{
+  "name": "@rackbops/ac-plugin-research-feed",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Panel + card for the research-feed-store sidecar (#106): browse graded links from the research-triage machine feed, filter by verdict/watch-live, and submit a URL for grading.",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/server.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rackbops/artifact-console-plugins.git",
+    "directory": "plugins/research-feed"
+  },
+  "acPlugin": {
+    "id": "research-feed",
+    "hostApiVersion": 1,
+    "kind": "in-process",
+    "server": "dist/server.js",
+    "frontend": "dist/ui.js",
+    "contributes": {
+      "panels": [
+        {
+          "id": "research-feed-panel",
+          "title": "Research",
+          "route": "/research",
+          "export": "ResearchFeedPanel"
+        }
+      ],
+      "cards": [
+        {
+          "id": "research-feed-card",
+          "title": "Research verdicts",
+          "sizes": [
+            "1x3"
+          ],
+          "export": "ResearchFeedCard"
+        }
+      ],
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/status"
+        },
+        {
+          "method": "GET",
+          "path": "/verdicts"
+        },
+        {
+          "method": "GET",
+          "path": "/verdicts/:id"
+        },
+        {
+          "method": "GET",
+          "path": "/history"
+        },
+        {
+          "method": "POST",
+          "path": "/submit"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.ui.json --noEmit",
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.ui.build.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@rackbops/ac-plugin-contract": "catalog:",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "jsdom": "^30.0.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

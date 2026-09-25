@@ -1,0 +1,35 @@
+{
+  "name": "@rackbops/ac-plugin-research-feed-store",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Sidecar that mirrors the research-triage machine feed into local SQLite for artifact-console's research-feed plugin (#453).",
+  "files": [],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rackbops/artifact-console-plugins.git",
+    "directory": "plugins/research-feed-store"
+  },
+  "acPlugin": {
+    "id": "research-feed-store",
+    "hostApiVersion": 1,
+    "kind": "sidecar",
+    "sidecar": {
+      "image": "ghcr.io/rackbops/ac-research-feed-store",
+      "healthPath": "/healthz"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

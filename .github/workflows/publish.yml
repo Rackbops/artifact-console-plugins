@@ -17,6 +17,11 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      # Only used by the Dockerfile branch below (a plugin shaped like research-feed-store, #453) --
+      # granted unconditionally at job level since GitHub Actions permissions can't be scoped
+      # per-step, but the branch itself no-ops (no docker login/build/push at all) for every plugin
+      # that ships no Dockerfile.
+      packages: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -88,8 +93,14 @@ jobs:
           cd "plugins/${NAME}"
           listing="$(npm pack --dry-run 2>&1)"
           echo "$listing"
-          if ! echo "$listing" | grep -qF "dist/server.js"; then
-            echo "plugins/${NAME}: npm pack --dry-run does not list dist/server.js" >&2
+          # A kind: "sidecar" plugin (research-feed-store, #453) ships no dist/ on npm at all -- its
+          # manifest carries `sidecar: {image, healthPath}` instead of `server`/`frontend`, and its
+          # container app is built and shipped as an image, never as an installable npm dist/ tree
+          # (check-bundles.mjs skips it for the same reason). This step only checks the entries a
+          # plugin actually DECLARES.
+          has_server="$(node -p "require('./package.json').acPlugin.server !== undefined")"
+          if [ "$has_server" = "true" ] && ! echo "$listing" | grep -qF "dist/server.js"; then
+            echo "plugins/${NAME}: declares acPlugin.server but npm pack --dry-run does not list dist/server.js" >&2
             exit 1
           fi
           has_frontend="$(node -p "require('./package.json').acPlugin.frontend !== undefined")"
@@ -165,6 +176,60 @@ jobs:
             escalate "Publish failed (trusted publisher likely not configured yet -- this is expected before the very first release)."
           fi
           printf '%s\n' "$out"
+
+      # research-feed-store (#453 decision 4) ships as a container image, not (only) an npm package:
+      # `kind: "sidecar"` plugins carry a Dockerfile alongside their package.json. Runs after the npm
+      # publish succeeds, keyed on the Dockerfile's mere presence so any future sidecar plugin gets
+      # this for free with no workflow change. linux/amd64 only (nucbox and the fleet are all
+      # x86_64); pushed with the job's own GITHUB_TOKEN (packages: write, above) -- no separate
+      # registry secret. No `:latest` tag: a deploy's compose fragment always pins the exact version,
+      # as ac-pipeline's does (artifact-console's own convention).
+      - name: Check for a Dockerfile (a kind sidecar plugin)
+        id: sidecar
+        shell: bash
+        env:
+          NAME: ${{ steps.tag.outputs.name }}
+        run: |
+          if [ -f "plugins/${NAME}/Dockerfile" ]; then
+            echo "has-dockerfile=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-dockerfile=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve the sidecar image name
+        if: steps.sidecar.outputs.has-dockerfile == 'true'
+        id: sidecar-image
+        shell: bash
+        env:
+          NAME: ${{ steps.tag.outputs.name }}
+        run: |
+          image="$(node -p "require('./plugins/${NAME}/package.json').acPlugin.sidecar.image")"
+          if [ -z "$image" ] || [ "$image" = "undefined" ]; then
+            echo "plugins/${NAME} has a Dockerfile but no acPlugin.sidecar.image to tag it as" >&2
+            exit 1
+          fi
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        if: steps.sidecar.outputs.has-dockerfile == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        if: steps.sidecar.outputs.has-dockerfile == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the sidecar image
+        if: steps.sidecar.outputs.has-dockerfile == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: plugins/${{ steps.tag.outputs.name }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.sidecar-image.outputs.image }}:${{ steps.tag.outputs.version }}
 
       - name: Extract the CHANGELOG section for the release notes
         shell: bash

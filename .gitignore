@@ -1,6 +1,7 @@
 node_modules/
 dist/
 plugins/*/dist/
+plugins/*/app/
 *.log
 
 .env

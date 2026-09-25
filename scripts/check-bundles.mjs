@@ -86,6 +86,11 @@ export function checkBundles(root) {
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8"))
     const manifest = pkg.acPlugin
     if (manifest === undefined || manifest === null || typeof manifest !== "object") continue
+    // A kind: "sidecar" plugin ships no dist/ at all -- its manifest carries `sidecar: {image,
+    // healthPath}` instead of `server`/`frontend`, and its container app compiles to app/, built
+    // and run inside its own Docker image, never bundled/installed as an npm dist/ tree. Nothing
+    // here applies to it.
+    if (manifest.kind === "sidecar") continue
 
     if (typeof manifest.server === "string") {
       checkEntry(pluginDir, manifest.server, "server", isServerSpecifierAllowed, errors, dir.name)

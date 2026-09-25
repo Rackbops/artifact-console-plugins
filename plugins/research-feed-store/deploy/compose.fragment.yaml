@@ -1,0 +1,12 @@
+# Append to an artifact-console deploy's compose.yaml. The service name equals the plugin id
+# (research-feed-store), so the host's default sidecar base URL (http://research-feed-store:8000,
+# services/sidecar.ts) resolves with no AC_SIDECAR_RESEARCH_FEED_STORE_URL override needed.
+services:
+  research-feed-store:
+    image: ghcr.io/rackbops/ac-research-feed-store:0.1.0
+    restart: unless-stopped
+    env_file: research-feed-store.env
+    volumes: [research-feed-data:/data]
+
+volumes:
+  research-feed-data: {}
