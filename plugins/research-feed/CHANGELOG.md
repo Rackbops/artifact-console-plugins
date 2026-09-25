@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.0] - 2026-09-25
+
+No functional change. The first version CI publishes through the trusted publisher, and the
+upgrade target for the pin-an-older-version check from the console's Admin card (#108, #106).
+
 ## [0.1.0] - 2026-09-24
 
 First release: the `research` panel and `research-feed-card` Overview card, proxying the

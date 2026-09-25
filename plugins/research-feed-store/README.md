@@ -53,5 +53,5 @@ fresh volume).
 ## Install into a console
 
 See the repo root [README](../../README.md#installing-from-a-console) -- install this alongside
-`@rackbops/ac-plugin-research-feed` (the in-process panel/card that reads it), matched
-`0.1.0`/`0.1.0` versions.
+`@rackbops/ac-plugin-research-feed` (the in-process panel/card that reads it). The sidecar's HTTP
+API is unchanged across every version listed in either CHANGELOG, so any pair works.

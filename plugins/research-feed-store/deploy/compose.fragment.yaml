@@ -3,7 +3,7 @@
 # services/sidecar.ts) resolves with no AC_SIDECAR_RESEARCH_FEED_STORE_URL override needed.
 services:
   research-feed-store:
-    image: ghcr.io/rackbops/ac-research-feed-store:0.1.0
+    image: ghcr.io/rackbops/ac-research-feed-store:0.1.1
     restart: unless-stopped
     env_file: research-feed-store.env
     volumes: [research-feed-data:/data]
