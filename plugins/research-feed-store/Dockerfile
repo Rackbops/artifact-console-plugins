@@ -18,11 +18,15 @@ WORKDIR /app
 # sidesteps that entirely; the runtime stage's own `COPY package.json ./` (below) is unaffected,
 # since nothing ever runs `npm install` there.
 RUN npm install --no-save --no-audit --no-fund typescript@5 @types/node@24
+# package.json is copied AFTER the install above (never before it -- see the comment on that RUN),
+# but IS needed for this tsc run: its "type": "module" is how TypeScript's nodenext module
+# detection decides these .ts files are ESM, not CommonJS -- without it present, tsc silently
+# treats every file as CommonJS and every `export`/`import` statement becomes a hard error.
 # tsconfig.build.json (used by `pnpm -r build` from the repo root) extends ../../tsconfig.base.json
 # -- unreachable from here, since this build's context is scoped to this directory alone. This
 # image builds with its own self-contained tsconfig.docker.json instead (kept in sync with
 # tsconfig.base.json + tsconfig.build.json's own overrides by tsconfig-docker-drift.test.ts).
-COPY tsconfig.docker.json ./
+COPY package.json tsconfig.docker.json ./
 COPY src ./src
 RUN npx tsc -p tsconfig.docker.json
 
