@@ -9,7 +9,7 @@
 # runtime-only, supplied at `docker run`/`docker compose up` via env_file, never baked into an
 # image layer (see plugins/research-feed-store/CLAUDE.md-equivalent note in README.md).
 
-FROM node:24-slim AS build
+FROM node:26-slim AS build
 WORKDIR /app
 # Deliberately does NOT copy package.json before this install: its devDependencies use pnpm's
 # `catalog:` protocol (resolved only inside the pnpm workspace), which plain npm chokes on
@@ -30,7 +30,7 @@ COPY package.json tsconfig.docker.json ./
 COPY src ./src
 RUN npx tsc -p tsconfig.docker.json
 
-FROM node:24-slim AS runtime
+FROM node:26-slim AS runtime
 WORKDIR /app
 COPY --from=build /app/app ./app
 COPY package.json ./
