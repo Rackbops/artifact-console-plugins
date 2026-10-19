@@ -26,14 +26,14 @@
         },
         "sidecar": {
           "$ref": "#/definitions/SidecarSpec",
-          "description": "Image + health path; required when `kind: \"sidecar\"`."
+          "description": "Image + health path, expected when `kind: \"sidecar\"`. Not enforced at load (#784): without it the health poll uses `/healthz`. Every bundled sidecar plugin's is checked in CI."
         },
         "capabilities": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Host-agent capabilities the plugin may use, each granted per machine in Admin (E4)."
+          "description": "Host-agent capabilities the plugin may use, each granted per machine in Admin (E4). A job's own `capabilities` (#843) is a subset of this list."
         },
         "contributes": {
           "$ref": "#/definitions/Contributes"
@@ -76,7 +76,7 @@
         "healthPath"
       ],
       "additionalProperties": false,
-      "description": "A sidecar plugin's image and health path. Present when `kind === \"sidecar\"`."
+      "description": "A sidecar plugin's image and health path, expected when `kind === \"sidecar\"`. The host reads only `healthPath` (its health poll) and never `image` (the compose file names the sidecar's image)."
     },
     "Contributes": {
       "type": "object",
@@ -138,7 +138,7 @@
         "attention": {
           "type": "boolean",
           "const": true,
-          "description": "#78: the plugin serves `GET /api/x/<id>/attention` -> `{ ok: true, items: AttentionItem[] }` (`attention.ts`). The `overview` plugin's rollup card discovers contributors via `PluginView.attention` (`views.ts`) rather than a second manifest read. Additive; always `true` when present (a boolean, not a route list, since the path is fixed)."
+          "description": "#78: the plugin serves `GET /api/x/<id>/attention` -> `{ ok: true, items: AttentionItem[] }` (`attention.ts`). The `overview` plugin's rollup card discovers contributors via `PluginView.attention` (`views.ts`) rather than a second manifest read. Additive; always `true` when present (a boolean, not a route list, since the path is fixed). The plugin must also declare that route in `routes` and register it; the host checks neither at load (#784; every bundled plugin's is checked in CI), and the rollup counts a contributor whose route fails as not loaded."
         }
       },
       "additionalProperties": false,
@@ -168,6 +168,11 @@
         "export": {
           "type": "string",
           "description": "The export name in the plugin's frontend bundle."
+        },
+        "isolation": {
+          "type": "string",
+          "const": "iframe",
+          "description": "Reserved (design §4, #124): `\"iframe\"` asks the host to mount this panel in an iframe. Not implemented in 2.0; the host accepts and ignores it, so a panel declaring it still loads in-process."
         }
       },
       "required": [
@@ -224,7 +229,8 @@
           "description": "What the action operates on, e.g. \"issue\" | \"report\" | \"global\"."
         },
         "confirm": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Accepted, but inert since #530: the modal is the one confirmation, so neither it nor the palette asks for a second click."
         },
         "danger": {
           "type": "boolean"
@@ -242,7 +248,7 @@
         "scope"
       ],
       "additionalProperties": false,
-      "description": "A confirm-gated action; the shell builds its button + modal from these fields (#34)."
+      "description": "An action; the shell builds its button + modal from these fields (#34), and opening the modal is the action's one confirmation (#530)."
     },
     "ActionField": {
       "type": "object",
@@ -339,11 +345,13 @@
         },
         "schedule": {
           "type": "string",
-          "description": "5-field cron expression."
+          "description": "5-field cron expression (the host's `jobs/cron.ts` grammar). Not validated when the plugin loads (#784): a schedule that does not parse is logged at warn when the scheduler starts and the job is never scheduled, while the plugin itself loads as usual. Every bundled plugin's schedules are parsed in CI."
         },
         "timeoutSec": {
           "type": "number",
-          "description": "Per-run timeout in seconds."
+          "description": "Per-run timeout in seconds. Must be at least 1: a zero or negative value would fire the timeout at once, timing out any run that awaits real I/O (#137). And at most 2147483, about 24.8 days: Node clamps a longer or non-finite `setTimeout` delay to 1 ms, which fires it at once, the same failure (#580).",
+          "minimum": 1,
+          "maximum": 2147483
         },
         "runOn": {
           "$ref": "#/definitions/JobRunOn"
@@ -351,6 +359,13 @@
         "minAgentVersion": {
           "type": "string",
           "description": "A `runOn: \"agent\"` job is not dispatched to a machine whose paired agent version compares lower than this (#372, #80); the run row records the skip with its reason instead. Ignored for a `runOn: \"host\"` job. Additive; absent means every paired machine is always dispatched, as before this field existed."
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The host-agent capabilities this job's verbs need on a machine (#843). A `runOn: \"agent\"` job is not dispatched to a paired machine that has not granted this plugin every one of them. That machine's row records `skipped` with reason `not granted: <capability>[, ...]` instead: no run is recorded, no `job.finished` is emitted and no failure is notified. Each must be declared in the plugin's top-level `capabilities` (the host refuses the manifest otherwise). Ignored for a `runOn: \"host\"` job. Additive: absent or empty dispatches to every paired machine, as before this field existed. A host released before this field refuses a manifest that declares it."
         }
       },
       "required": [
@@ -476,10 +491,11 @@
         },
         "format": {
           "type": "string",
-          "description": "Anchored regex the value must match, e.g. \"^[0-9]+$\"."
+          "description": "Anchored regex the value is expected to match, e.g. \"^[0-9]+$\". Not enforced by the host; every bundled plugin's compiles and is anchored (checked in CI)."
         },
         "required": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether the plugin needs a value. Not enforced by the host: a missing value reads `undefined`."
         },
         "secret": {
           "type": "boolean"
@@ -489,7 +505,7 @@
         "key"
       ],
       "additionalProperties": false,
-      "description": "A declared environment variable (field names shared verbatim with the discord-bot index)."
+      "description": "A declared environment variable (field names shared verbatim with the discord-bot index). Declaring a key is what lets `HostApi.env.get` read it. `format` and `required` are metadata only: the host checks a value against neither (#784), so a plugin that depends on one checks its own value."
     }
   }
 }

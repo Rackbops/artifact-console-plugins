@@ -19,7 +19,7 @@ catalog:
   react-dom: ^19.2.0
   # Pinned exact: this version is published under the `next` dist-tag, not `latest` (#450), so a
   # bare range would never resolve it.
-  "@rackbops/ac-plugin-contract": 2.0.0-alpha.33
+  "@rackbops/ac-plugin-contract": 2.0.0-alpha.58
 
 # pnpm's supply-chain gate holds back very recently published versions; the contract package ships
 # frequent prereleases this repo needs right away.
