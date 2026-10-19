@@ -165,8 +165,8 @@ settings:
 catalogs:
   default:
     '@rackbops/ac-plugin-contract':
-      specifier: 2.0.0-alpha.33
-      version: 2.0.0-alpha.33
+      specifier: 2.0.0-alpha.58
+      version: 2.0.0-alpha.58
     '@types/node':
       specifier: ^26.0.0
       version: 26.6.2
@@ -198,7 +198,7 @@ importers:
         version: 2.5.14
       '@rackbops/ac-plugin-contract':
         specifier: 'catalog:'
-        version: 2.0.0-alpha.33
+        version: 2.0.0-alpha.58
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
@@ -216,7 +216,7 @@ importers:
     devDependencies:
       '@rackbops/ac-plugin-contract':
         specifier: 'catalog:'
-        version: 2.0.0-alpha.33
+        version: 2.0.0-alpha.58
       '@testing-library/dom':
         specifier: ^10.4.0
         version: 10.4.2
@@ -252,7 +252,7 @@ importers:
     devDependencies:
       '@rackbops/ac-plugin-contract':
         specifier: 'catalog:'
-        version: 2.0.0-alpha.33
+        version: 2.0.0-alpha.58
       '@rackbops/ui-react':
         specifier: 0.2.40
         version: 0.2.40(react@19.3.0)
@@ -498,8 +498,8 @@ packages:
   '@oxc-project/types@0.151.0':
     resolution: {integrity: sha512-J1yXrIlNDZVzE3ada310xeAw7nH8yCAyLPuUIsjKatFPmfn5bS1oW+cM+QsGOtVWd5nhSpbwZWx/rue+r5Z+PA==}
 
-  '@rackbops/ac-plugin-contract@2.0.0-alpha.33':
-    resolution: {integrity: sha512-AJhaTZNc9FYGu1w64KeGN0dulJqIxzS88Ah7V281UUOkz6Xgkofr3x40ubLAtRvrF4xL1yx3fEKQDMRhfxCobA==}
+  '@rackbops/ac-plugin-contract@2.0.0-alpha.58':
+    resolution: {integrity: sha512-bXdZuwTQm7/dj2YsEX0YmvEg/F9pv58m8//uqsu5e1gG/WZkVfRmdiCJrmzispkqEue+r/YgLacuNhONqLUIiw==}
 
   '@rackbops/ui-react@0.2.40':
     resolution: {integrity: sha512-K6CHvR8qeAw5g8GU9XvZctvuu5mN2AA+IXEwmrLgMHlSCzPcM6C6NFKig4nCJYifIWNsFpgh7Nw3YPK78sZp9g==}
@@ -1387,7 +1387,7 @@ snapshots:
 
   '@oxc-project/types@0.151.0': {}
 
-  '@rackbops/ac-plugin-contract@2.0.0-alpha.33':
+  '@rackbops/ac-plugin-contract@2.0.0-alpha.58':
     dependencies:
       '@octokit/rest': 22.0.1
 
