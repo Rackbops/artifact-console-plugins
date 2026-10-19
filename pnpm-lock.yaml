@@ -254,8 +254,8 @@ importers:
         specifier: 'catalog:'
         version: 2.0.0-alpha.58
       '@rackbops/ui-react':
-        specifier: 0.2.40
-        version: 0.2.40(react@19.3.0)
+        specifier: 0.2.43
+        version: 0.2.43(react@19.3.0)
       '@testing-library/dom':
         specifier: ^10.4.0
         version: 10.4.2
@@ -501,8 +501,8 @@ packages:
   '@rackbops/ac-plugin-contract@2.0.0-alpha.58':
     resolution: {integrity: sha512-bXdZuwTQm7/dj2YsEX0YmvEg/F9pv58m8//uqsu5e1gG/WZkVfRmdiCJrmzispkqEue+r/YgLacuNhONqLUIiw==}
 
-  '@rackbops/ui-react@0.2.40':
-    resolution: {integrity: sha512-K6CHvR8qeAw5g8GU9XvZctvuu5mN2AA+IXEwmrLgMHlSCzPcM6C6NFKig4nCJYifIWNsFpgh7Nw3YPK78sZp9g==}
+  '@rackbops/ui-react@0.2.43':
+    resolution: {integrity: sha512-z/9x4PCbx5RycaLpt2/0YvYD/FZygoXUQkZg42c2uN3IA4Hq2zF71/M4pAlfRcq3OW2waQIQKHE56wxK7hAodQ==}
     peerDependencies:
       react: '>=18'
 
@@ -1391,7 +1391,7 @@ snapshots:
     dependencies:
       '@octokit/rest': 22.0.1
 
-  '@rackbops/ui-react@0.2.40(react@19.3.0)':
+  '@rackbops/ui-react@0.2.43(react@19.3.0)':
     dependencies:
       react: 19.3.0
 
