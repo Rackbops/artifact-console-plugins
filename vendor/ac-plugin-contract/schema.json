@@ -235,6 +235,11 @@
         "danger": {
           "type": "boolean"
         },
+        "operator": {
+          "type": "boolean",
+          "const": true,
+          "description": "With the admin kill switch off (`admin_enabled = false`), the host refuses this action (`POST /api/actions/<plugin>/<id>`) with `403 admin disabled`, as it refuses the admin plugin's own surface. Mark an action or route an operator would expect the switch to shut: one that runs a job the job-run route refuses, writes to GitHub or the store on the operator's behalf, or changes the console's configuration. Additive; a host released before this field refuses a manifest that declares it (#867)."
+        },
         "fields": {
           "type": "array",
           "items": {
@@ -394,6 +399,11 @@
         "path": {
           "type": "string",
           "description": "Path under the plugin's namespace, e.g. \"/feed\"."
+        },
+        "operator": {
+          "type": "boolean",
+          "const": true,
+          "description": "With the admin kill switch off (`admin_enabled = false`), the host refuses this route for its declared method with `403 admin disabled`, as it refuses the admin plugin's own surface. Mark an action or route an operator would expect the switch to shut: one that runs a job the job-run route refuses, writes to GitHub or the store on the operator's behalf, or changes the console's configuration. Additive; a host released before this field refuses a manifest that declares it (#867)."
         }
       },
       "required": [
