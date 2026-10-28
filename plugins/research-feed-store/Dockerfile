@@ -1,7 +1,11 @@
 # research-feed-store: a no-runtime-dependency Node/TypeScript sidecar (#453 decision 1). Two
 # stages -- build compiles src/ to app/ with tsc; runtime ships only app/ + package.json, nothing
 # else (no node_modules -- there is nothing to install; node:http, node:sqlite and global fetch are
-# all built into Node 24).
+# all built into Node 26).
+#
+# The Node base is pinned to an exact version plus its digest, and the two build tools to the versions
+# the workspace lockfile resolves (dockerfile.test.ts keeps both honest), so a release builds what the
+# tests ran against; Renovate's dockerfile manager bumps the FROM tag + digest through a PR.
 #
 # Deliberately no ARG, ENV or LABEL anywhere in this file naming RESEARCH_FEED_URL,
 # RESEARCH_FEED_TOKEN, RESEARCH_FEED_ACCESS_CLIENT_ID, RESEARCH_FEED_ACCESS_CLIENT_SECRET,
@@ -9,7 +13,7 @@
 # runtime-only, supplied at `docker run`/`docker compose up` via env_file, never baked into an
 # image layer (see plugins/research-feed-store/CLAUDE.md-equivalent note in README.md).
 
-FROM node:26-slim AS build
+FROM node:26.12.1-slim@sha256:36793bcbb160a6a16cede1e62b93f84e26b78a972a8a4c0b879c1c12f22761ec AS build
 WORKDIR /app
 # Deliberately does NOT copy package.json before this install: its devDependencies use pnpm's
 # `catalog:` protocol (resolved only inside the pnpm workspace), which plain npm chokes on
@@ -17,7 +21,7 @@ WORKDIR /app
 # even for an unrelated `npm install <pkg>@<version>` command. Installing into an empty directory
 # sidesteps that entirely; the runtime stage's own `COPY package.json ./` (below) is unaffected,
 # since nothing ever runs `npm install` there.
-RUN npm install --no-save --no-audit --no-fund typescript@5 @types/node@24
+RUN npm install --no-save --no-audit --no-fund typescript@7.0.2 @types/node@26.6.5
 # package.json is copied AFTER the install above (never before it -- see the comment on that RUN),
 # but IS needed for this tsc run: its "type": "module" is how TypeScript's nodenext module
 # detection decides these .ts files are ESM, not CommonJS -- without it present, tsc silently
@@ -30,7 +34,7 @@ COPY package.json tsconfig.docker.json ./
 COPY src ./src
 RUN npx tsc -p tsconfig.docker.json
 
-FROM node:26-slim AS runtime
+FROM node:26.12.1-slim@sha256:36793bcbb160a6a16cede1e62b93f84e26b78a972a8a4c0b879c1c12f22761ec AS runtime
 WORKDIR /app
 COPY --from=build /app/app ./app
 COPY package.json ./
