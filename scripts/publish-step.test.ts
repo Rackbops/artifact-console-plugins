@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process"
+import { execFileSync, spawnSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { delimiter, join } from "node:path"
@@ -278,3 +278,63 @@ test.skipIf(!hasBash)(
     expect(result.stdout + result.stderr).toMatch(/does not list dist\/server\.js/)
   },
 )
+
+// ---- the "Require the tagged commit to be on main" step (#23) ----------------------------------
+
+/** A clone whose `origin` is a bare repo holding `main` (commit A); the clone also carries a
+ *  commit B that exists only on an unpushed branch. Returns both shas. */
+function mainFixture(): { dir: string; onMain: string; branchOnly: string } {
+  const root = mkdtempSync(join(tmpdir(), "publish-step-main-"))
+  dirs.push(root)
+  const git = (cwd: string, ...args: string[]) =>
+    execFileSync("git", args, { cwd, encoding: "utf8", stdio: "pipe" }).trim()
+  const origin = join(root, "origin.git")
+  git(root, "init", "--bare", "-b", "main", origin)
+  const dir = join(root, "work")
+  git(root, "clone", origin, dir)
+  git(dir, "config", "user.email", "t@example.invalid")
+  git(dir, "config", "user.name", "t")
+  writeFileSync(join(dir, "a.txt"), "a")
+  git(dir, "add", ".")
+  git(dir, "commit", "-m", "A")
+  git(dir, "push", "origin", "HEAD:main")
+  const onMain = git(dir, "rev-parse", "HEAD")
+  git(dir, "checkout", "-b", "feature")
+  writeFileSync(join(dir, "b.txt"), "b")
+  git(dir, "add", ".")
+  git(dir, "commit", "-m", "B")
+  return { dir, onMain, branchOnly: git(dir, "rev-parse", "HEAD") }
+}
+
+test.skipIf(!hasBash)("a tagged commit that is only on a branch fails the on-main guard", () => {
+  const { dir, branchOnly } = mainFixture()
+  const script = stepRunBody("Require the tagged commit to be on main")
+  const result = run(script, dir, { GITHUB_SHA: branchOnly })
+  expect(result.status).not.toBe(0)
+  expect(result.stderr).toMatch(/not an ancestor of origin\/main/)
+})
+
+test.skipIf(!hasBash)("a tagged commit on main passes the on-main guard", () => {
+  const { dir, onMain } = mainFixture()
+  const script = stepRunBody("Require the tagged commit to be on main")
+  const result = run(script, dir, { GITHUB_SHA: onMain })
+  expect(result.status, result.stderr).toBe(0)
+})
+
+test("the on-main guard runs before any install or publish step", () => {
+  const names = stepBlocks().map((b) => b.match(/- name: (.*)/)?.[1] ?? "")
+  const guard = names.findIndex((n) => n.startsWith("Require the tagged commit to be on main"))
+  expect(guard).toBeGreaterThanOrEqual(0)
+  expect(guard).toBeLessThan(names.findIndex((n) => n === "Install"))
+  expect(guard).toBeLessThan(names.indexOf("Publish to npm"))
+  expect(readFileSync(workflowPath, "utf8")).toMatch(/fetch-depth:\s*0/)
+})
+
+test("the sidecar image is built and pushed before the npm publish (#18)", () => {
+  const names = stepBlocks().map((b) => b.match(/- name: (.*)/)?.[1] ?? "")
+  const image = names.indexOf("Build and push the sidecar image")
+  const npm = names.indexOf("Publish to npm")
+  expect(image).toBeGreaterThanOrEqual(0)
+  expect(npm).toBeGreaterThanOrEqual(0)
+  expect(image).toBeLessThan(npm)
+})
