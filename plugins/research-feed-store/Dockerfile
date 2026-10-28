@@ -4,8 +4,9 @@
 # all built into Node 26).
 #
 # The Node base is pinned to an exact version plus its digest, and the two build tools to the versions
-# the workspace lockfile resolves (dockerfile.test.ts keeps both honest), so a release builds what the
-# tests ran against; Renovate's dockerfile manager bumps the FROM tag + digest through a PR.
+# the workspace lockfile resolves, so a release builds what the tests ran against. dockerfile.test.ts
+# keeps both honest. Renovate's dockerfile manager bumps the FROM tag + digest through a PR; the two
+# npm pins are not visible to it, so a catalog bump fails that test until they are edited by hand.
 #
 # Deliberately no ARG, ENV or LABEL anywhere in this file naming RESEARCH_FEED_URL,
 # RESEARCH_FEED_TOKEN, RESEARCH_FEED_ACCESS_CLIENT_ID, RESEARCH_FEED_ACCESS_CLIENT_SECRET,

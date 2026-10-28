@@ -27,13 +27,16 @@ test("Dockerfile declares no ARG, ENV or LABEL at all naming a credential-shaped
 
 const lockfilePath = fileURLToPath(new URL("../../../pnpm-lock.yaml", import.meta.url))
 
-test("both FROM lines name an exact node:<major>.<minor>.<patch>-slim tag", () => {
+test("both FROM lines name an exact node:<major>.<minor>.<patch>-slim tag and a digest", () => {
   const text = readFileSync(dockerfilePath, "utf8")
   const froms = text.split(/\r?\n/).filter((line) => /^FROM\s/i.test(line))
   expect(froms).toHaveLength(2)
   for (const line of froms) {
-    expect(line).toMatch(/^FROM node:\d+\.\d+\.\d+-slim(@sha256:[0-9a-f]{64})? AS \w+$/)
+    expect(line).toMatch(/^FROM node:\d+\.\d+\.\d+-slim@sha256:[0-9a-f]{64} AS \w+$/)
   }
+  // Build and runtime stages must run the same Node: same tag and digest on both lines.
+  const [first, second] = froms.map((line) => line.replace(/ AS \w+$/, ""))
+  expect(first).toBe(second)
 })
 
 test("the RUN line's typescript and @types/node equal the lockfile's resolved versions", () => {
