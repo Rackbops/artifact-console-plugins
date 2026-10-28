@@ -12,6 +12,7 @@ import type { Store } from "./store.js"
 const MAX_BODY_BYTES = 16 * 1024
 const DEFAULT_LIMIT = 100
 const MAX_LIMIT = 500
+const SUBMIT_TIMEOUT_MS = 30_000
 
 export type FetchFn = typeof fetch
 
@@ -21,6 +22,8 @@ export interface HandlerDeps {
   fetchFn: FetchFn
   /** Only wired when config.testHooks is true (POST /__poll). */
   triggerPoll?: () => Promise<unknown>
+  /** Deadline for POST /submit's feed request, body read included; tests shorten it. */
+  submitTimeoutMs?: number
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -54,7 +57,16 @@ function parseLimit(searchParams: URLSearchParams): number {
   if (raw === null) return DEFAULT_LIMIT
   const n = Number(raw)
   if (!Number.isFinite(n) || n < 1) return DEFAULT_LIMIT
-  return Math.min(n, MAX_LIMIT)
+  return Math.min(Math.floor(n), MAX_LIMIT)
+}
+
+/** `undefined` for a segment that is not valid percent-encoding (decodeURIComponent throws). */
+function decodeId(segment: string): string | undefined {
+  try {
+    return decodeURIComponent(segment)
+  } catch {
+    return undefined
+  }
 }
 
 function healthBody(store: Store) {
@@ -75,18 +87,17 @@ async function submitToFeed(
   config: Config,
   fetchFn: FetchFn,
   url: string,
+  timeoutMs: number,
 ): Promise<{ status: number; body: unknown } | { unavailable: true; error: string }> {
   if (!config.configured || !config.feedUrl) {
     return { unavailable: true, error: "the research feed is not configured" }
   }
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 30_000)
   try {
     const res = await fetchFn(new URL("/api/feed/submit", config.feedUrl).toString(), {
       method: "POST",
       headers: { ...feedHeaders(config), "content-type": "application/json" },
       body: JSON.stringify({ url }),
-      signal: controller.signal,
+      signal: AbortSignal.timeout(timeoutMs),
     })
     // A LITERAL 502/504 from research-triage's own upstream (its Cloudflare Access edge or its own
     // backend) is a real, resolved HTTP response -- not a thrown fetch error -- so it would
@@ -108,8 +119,6 @@ async function submitToFeed(
     return { status: res.status, body }
   } catch (err) {
     return { unavailable: true, error: err instanceof Error ? err.message : String(err) }
-  } finally {
-    clearTimeout(timer)
   }
 }
 
@@ -147,7 +156,8 @@ async function handle(req: IncomingMessage, res: ServerResponse, deps: HandlerDe
 
   const verdictIdMatch = /^\/verdicts\/([^/]+)$/.exec(pathname)
   if (method === "GET" && verdictIdMatch?.[1]) {
-    const id = decodeURIComponent(verdictIdMatch[1])
+    const id = decodeId(verdictIdMatch[1])
+    if (id === undefined) return sendJson(res, 400, { ok: false, error: "malformed id" })
     const grading = store.byId(id)
     if (!grading) return sendJson(res, 404, { ok: false, error: "unknown verdict id" })
     return sendJson(res, 200, {
@@ -168,7 +178,12 @@ async function handle(req: IncomingMessage, res: ServerResponse, deps: HandlerDe
     if (typeof submitUrl !== "string" || submitUrl.length === 0) {
       return sendJson(res, 400, { ok: false, error: "url is required" })
     }
-    const result = await submitToFeed(config, fetchFn, submitUrl)
+    const result = await submitToFeed(
+      config,
+      fetchFn,
+      submitUrl,
+      deps.submitTimeoutMs ?? SUBMIT_TIMEOUT_MS,
+    )
     if ("unavailable" in result) {
       // Never 502/504 (decision 8) -- behind Cloudflare an origin's own 502/504 is replaced, so the
       // sidecar always answers its own 503 instead, regardless of what actually failed.

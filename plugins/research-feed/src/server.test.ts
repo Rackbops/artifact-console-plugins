@@ -177,3 +177,14 @@ test("POST /submit with no url is a 400 and never calls the sidecar", async () =
   expect(res.status).toBe(400)
   expect(fetchMock).not.toHaveBeenCalled()
 })
+
+test("GET /verdicts/:id with malformed percent-encoding answers 400 without calling the sidecar", async () => {
+  const { host, routes } = fakeHost()
+  createPlugin(host).activate()
+  const res = await findRoute(routes, "GET", "/verdicts/:id").handler(
+    new Request("http://x/api/x/research-feed/verdicts/%E0%A4%A"),
+  )
+  expect(res.status).toBe(400)
+  expect(await res.json()).toEqual({ ok: false, error: "malformed id" })
+  expect(fetchMock).not.toHaveBeenCalled()
+})

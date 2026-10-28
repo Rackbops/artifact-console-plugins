@@ -38,12 +38,10 @@ async function proxy(
   body?: unknown,
 ): Promise<Response> {
   const base = host.sidecar.baseUrl(SIDECAR_ID)
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), SIDECAR_TIMEOUT_MS)
   try {
     const res = await fetch(`${base}${path}`, {
       method,
-      signal: controller.signal,
+      signal: AbortSignal.timeout(SIDECAR_TIMEOUT_MS),
       ...(body !== undefined
         ? { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }
         : {}),
@@ -60,14 +58,18 @@ async function proxy(
     return Response.json(json, { status: res.status })
   } catch (err) {
     return unavailable(errMessage(err))
-  } finally {
-    clearTimeout(timer)
   }
 }
 
-function parseVerdictId(requestUrl: string): string | undefined {
+/** `undefined` when there is no id segment, `null` when it is malformed percent-encoding. */
+function parseVerdictId(requestUrl: string): string | null | undefined {
   const match = /\/verdicts\/([^/]+)\/?$/.exec(new URL(requestUrl).pathname)
-  return match?.[1] ? decodeURIComponent(match[1]) : undefined
+  if (!match?.[1]) return undefined
+  try {
+    return decodeURIComponent(match[1])
+  } catch {
+    return null
+  }
 }
 
 export const createPlugin: CreatePlugin = (host) => ({
@@ -83,6 +85,8 @@ export const createPlugin: CreatePlugin = (host) => ({
     // (plugins/scans's own convention comment).
     host.routes.register("GET", "/verdicts/:id", (request) => {
       const id = parseVerdictId(request.url)
+      if (id === null)
+        return Promise.resolve(Response.json({ ok: false, error: "malformed id" }, { status: 400 }))
       if (!id)
         return Promise.resolve(Response.json({ ok: false, error: "missing id" }, { status: 404 }))
       return proxy(host, "GET", `/verdicts/${encodeURIComponent(id)}`)
