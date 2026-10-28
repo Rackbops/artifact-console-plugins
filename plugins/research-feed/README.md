@@ -21,5 +21,5 @@ down.
 
 ## Install into a console
 
-Install this alongside `@rackbops/ac-plugin-research-feed-store` (matched versions) -- see the
-[repo root README](../../README.md#installing-from-a-console).
+Install this alongside `@rackbops/ac-plugin-research-feed-store` (any versions work; the sidecar's
+HTTP API has not changed) -- see the [repo root README](../../README.md#installing-from-a-console).
