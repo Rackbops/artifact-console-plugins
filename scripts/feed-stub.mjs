@@ -171,7 +171,7 @@ if (process.argv[1] && process.argv[1].endsWith("feed-stub.mjs")) {
   const port = Number(args.port ?? process.env.FEED_STUB_PORT ?? 0)
   const { server } = createFeedStub({
     token: args.token,
-    requireAccess: args["require-access"] === undefined ? undefined : true,
+    requireAccess: args.requireAccess,
     cfClientId: args["cf-client-id"],
     cfClientSecret: args["cf-client-secret"],
   })
