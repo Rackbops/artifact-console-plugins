@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { afterEach, expect, test } from "vitest"
+import { afterEach, expect, test, vi } from "vitest"
 import type { FeedItem, Store } from "./store.js"
 import { openStore } from "./store.js"
 
@@ -208,4 +208,43 @@ test("setPollState/pollState round-trips, and /healthz is 200 while the feed is 
   // The store itself never gates on poll state -- healthz's own 200-while-unreachable behavior is
   // asserted at the http.ts layer (http.test.ts); this just confirms the state that backs it.
   store.close()
+})
+
+test("latestPerUrl parses only the rows it returns", () => {
+  const store = openTrackedStore(tempDbPath())
+  store.applyPage(
+    Array.from({ length: 50 }, (_, i) =>
+      item({
+        id: `g${i}`,
+        url: `https://example.com/${i}`,
+        gradedAt: `2026-09-01T00:00:${String(i).padStart(2, "0")}.000Z`,
+        cursor: String(i + 1),
+      }),
+    ),
+    "51",
+  )
+  const parse = vi.spyOn(JSON, "parse")
+  try {
+    const rows = store.latestPerUrl({ limit: 5 })
+    // The newest five, in order, exactly as before the refactor.
+    expect(rows.map((g) => g.id)).toEqual(["g49", "g48", "g47", "g46", "g45"])
+    // Two JSON columns (key_takeaways, corrections) per returned row, none for the other 45.
+    expect(parse).toHaveBeenCalledTimes(10)
+  } finally {
+    parse.mockRestore()
+  }
+})
+
+test("latestPerUrl applies the verdict filter before the limit", () => {
+  const store = openTrackedStore(tempDbPath())
+  store.applyPage(
+    [
+      item({ id: "g1", url: "https://example.com/a", verdict: "keep", cursor: "1" }),
+      item({ id: "g2", url: "https://example.com/b", verdict: "drop", cursor: "2" }),
+      item({ id: "g3", url: "https://example.com/c", verdict: "keep", cursor: "3" }),
+    ],
+    "4",
+  )
+  expect(store.latestPerUrl({ verdict: "keep", limit: 1 }).map((g) => g.id)).toEqual(["g3"])
+  expect(store.latestPerUrl({ verdict: "keep", limit: 5 }).map((g) => g.id)).toEqual(["g3", "g1"])
 })
