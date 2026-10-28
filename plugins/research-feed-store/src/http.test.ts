@@ -31,6 +31,7 @@ async function startServer(opts: {
   config?: ReturnType<typeof readConfig>
   fetchFn?: typeof fetch
   triggerPoll?: () => Promise<unknown>
+  submitTimeoutMs?: number
 }): Promise<{ url: string; store: Store }> {
   const store = opts.store ?? openStore(tempDbPath())
   stores.push(store)
@@ -40,6 +41,7 @@ async function startServer(opts: {
     config,
     fetchFn: opts.fetchFn ?? fetch,
     triggerPoll: opts.triggerPoll,
+    submitTimeoutMs: opts.submitTimeoutMs,
   })
   const server = createServer(handler)
   servers.push(server)
@@ -212,4 +214,45 @@ test("an unknown route is 404 JSON", async () => {
   expect(res.status).toBe(404)
   const body = (await res.json()) as { ok: boolean }
   expect(body.ok).toBe(false)
+})
+
+/** Headers arrive at once, then the body never ends -- unless the request's signal aborts, which
+ *  errors the stream the way a real fetch body does. */
+function stalledBodyFetch(): typeof fetch {
+  return (async (_url: unknown, init?: RequestInit) => {
+    const signal = init?.signal
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        signal?.addEventListener("abort", () => controller.error(signal.reason))
+      },
+    })
+    return new Response(body, { status: 200, headers: { "content-type": "application/json" } })
+  }) as typeof fetch
+}
+
+test("/submit answers 503 when the feed sends headers and then stalls the body", async () => {
+  const { url } = await startServer({
+    config: readConfig({ RESEARCH_FEED_URL: "https://rt.example", RESEARCH_FEED_TOKEN: "rtf_x" }),
+    fetchFn: stalledBodyFetch(),
+    submitTimeoutMs: 50,
+  })
+  const res = await fetch(`${url}/submit`, {
+    method: "POST",
+    body: JSON.stringify({ url: "https://example.com/a" }),
+  })
+  expect(res.status).toBe(503)
+})
+
+test("/history floors a fractional limit and answers 200", async () => {
+  const { url } = await startServer({})
+  const res = await fetch(`${url}/history?limit=1.5`)
+  expect(res.status).toBe(200)
+  expect(((await res.json()) as { ok: boolean }).ok).toBe(true)
+})
+
+test("/verdicts/:id with malformed percent-encoding answers 400, not 500", async () => {
+  const { url } = await startServer({})
+  const res = await fetch(`${url}/verdicts/%E0%A4%A`)
+  expect(res.status).toBe(400)
+  expect(await res.json()).toEqual({ ok: false, error: "malformed id" })
 })

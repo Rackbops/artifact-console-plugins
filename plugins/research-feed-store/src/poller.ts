@@ -6,12 +6,12 @@ import type { FeedItem, Store } from "./store.js"
  * The poll loop (#453 decision 6): pages `GET /api/feed/gradings?since=&limit=500` until an empty
  * page, committing each page's upserts + advanced cursor in one transaction (`Store.applyPage`). A
  * failed poll records `unreachable` and keeps the old cursor -- the next tick retries from where it
- * left off. Each HTTP request has its own 30s timeout.
+ * left off. Each HTTP request has its own 30s deadline, covering the response body as well as the headers.
  */
 
 export type FetchFn = typeof fetch
 
-const REQUEST_TIMEOUT_MS = 30_000
+export const REQUEST_TIMEOUT_MS = 30_000
 const PAGE_LIMIT = 500
 
 export interface PollResult {
@@ -34,25 +34,11 @@ function isFeedPage(body: unknown): body is FeedPage {
   )
 }
 
-async function fetchWithTimeout(
-  fetchFn: FetchFn,
-  url: string,
-  init: RequestInit,
-  timeoutMs: number,
-): Promise<Response> {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    return await fetchFn(url, { ...init, signal: controller.signal })
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
 export async function pollOnce(
   config: Config,
   store: Store,
   fetchFn: FetchFn = fetch,
+  requestTimeoutMs: number = REQUEST_TIMEOUT_MS,
 ): Promise<PollResult> {
   const attemptAt = new Date().toISOString()
 
@@ -80,7 +66,12 @@ export async function pollOnce(
       url.searchParams.set("since", since)
       url.searchParams.set("limit", String(PAGE_LIMIT))
 
-      const res = await fetchWithTimeout(fetchFn, url.toString(), { headers }, REQUEST_TIMEOUT_MS)
+      // One signal for the whole exchange: it stays armed through `res.json()`, so a feed that
+      // sends headers and then stalls is aborted too.
+      const res = await fetchFn(url.toString(), {
+        headers,
+        signal: AbortSignal.timeout(requestTimeoutMs),
+      })
       if (!res.ok) {
         throw new Error(`feed responded ${res.status} for GET /api/feed/gradings`)
       }

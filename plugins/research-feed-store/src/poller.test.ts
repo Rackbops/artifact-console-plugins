@@ -151,3 +151,28 @@ test("a non-ok feed response is treated as a failed poll", async () => {
   expect(store.pollState()?.state).toBe("unreachable")
   store.close()
 })
+
+/** Headers arrive at once, then the body never ends -- unless the request's signal aborts, which
+ *  errors the stream the way a real fetch body does. */
+function stalledBodyFetch(): typeof fetch {
+  return (async (_url: unknown, init?: RequestInit) => {
+    const signal = init?.signal
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        signal?.addEventListener("abort", () => controller.error(signal.reason))
+      },
+    })
+    return new Response(body, { status: 200, headers: { "content-type": "application/json" } })
+  }) as typeof fetch
+}
+
+test("pollOnce aborts a feed that sends headers and then stalls the body", async () => {
+  const store = openStore(tempDbPath())
+  const started = Date.now()
+  const result = await pollOnce(configuredEnv(), store, stalledBodyFetch(), 50)
+  expect(result.ok).toBe(false)
+  expect(result.error).toMatch(/timeout|abort/i)
+  expect(Date.now() - started).toBeLessThan(5_000)
+  expect(store.pollState()?.state).toBe("unreachable")
+  store.close()
+})
