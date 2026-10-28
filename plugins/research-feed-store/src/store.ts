@@ -177,20 +177,14 @@ export class Store {
       if (!current || Number(row.cursor) > Number(current.cursor)) byUrl.set(row.url, row)
     }
 
-    let gradings = [...byUrl.values()]
-      .sort((a, b) => Number(b.cursor) - Number(a.cursor))
-      .map(rowToGrading)
-
-    if (filter.verdict !== undefined) {
-      gradings = gradings.filter((g) => g.verdict === filter.verdict)
-    }
-    if (filter.watchLive !== undefined) {
-      gradings = gradings.filter((g) => g.watchLive === filter.watchLive)
-    }
-    if (filter.limit !== undefined) {
-      gradings = gradings.slice(0, filter.limit)
-    }
-    return gradings
+    // Filter and slice the raw rows first: rowToGrading JSON-parses two columns per row, so only
+    // the rows actually returned should pay for it.
+    let latest = [...byUrl.values()].sort((a, b) => Number(b.cursor) - Number(a.cursor))
+    const { verdict, watchLive, limit } = filter
+    if (verdict !== undefined) latest = latest.filter((r) => r.verdict === verdict)
+    if (watchLive !== undefined) latest = latest.filter((r) => (r.watch_live === 1) === watchLive)
+    if (limit !== undefined) latest = latest.slice(0, limit)
+    return latest.map(rowToGrading)
   }
 
   byId(id: string): StoredGrading | undefined {
