@@ -325,7 +325,7 @@ test("the on-main guard runs before any install or publish step", () => {
   const names = stepBlocks().map((b) => b.match(/- name: (.*)/)?.[1] ?? "")
   const guard = names.findIndex((n) => n.startsWith("Require the tagged commit to be on main"))
   expect(guard).toBeGreaterThanOrEqual(0)
-  expect(guard).toBeLessThan(names.findIndex((n) => n === "Install"))
+  expect(guard).toBeLessThan(names.indexOf("Install"))
   expect(guard).toBeLessThan(names.indexOf("Publish to npm"))
   expect(readFileSync(workflowPath, "utf8")).toMatch(/fetch-depth:\s*0/)
 })
