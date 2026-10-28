@@ -76,7 +76,7 @@ export function createFeedStub(opts = {}) {
     return text.length > 0 ? JSON.parse(text) : {}
   }
 
-  function handleGradings(req, res, url) {
+  function handleGradings(_req, res, url) {
     const since = Number(url.searchParams.get("since") ?? "0")
     const rawLimit = Number(url.searchParams.get("limit") ?? "100")
     const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? rawLimit : 100, 500))
@@ -166,7 +166,7 @@ export function createFeedStub(opts = {}) {
   return { server, gradings }
 }
 
-if (process.argv[1] && process.argv[1].endsWith("feed-stub.mjs")) {
+if (process.argv[1]?.endsWith("feed-stub.mjs")) {
   const args = parseArgs(process.argv.slice(2))
   const port = Number(args.port ?? process.env.FEED_STUB_PORT ?? 0)
   const { server } = createFeedStub({
