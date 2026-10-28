@@ -11,7 +11,7 @@ import {
   Label,
   type SemanticVariant,
 } from "@rackbops/ui-react"
-import { type FormEvent, useEffect, useState } from "react"
+import { type FormEvent, useEffect, useRef, useState } from "react"
 
 /**
  * `plugins/research-feed`'s frontend (#106, decision 10): imports only `react` (plus the compiler's
@@ -117,6 +117,8 @@ export function ResearchFeedPanel() {
   const [loaded, setLoaded] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [history, setHistory] = useState<Verdict[]>([])
+  // The row whose history was last requested; a late answer for any other row is dropped.
+  const expandedRef = useRef<string | null>(null)
   const [submitUrl, setSubmitUrl] = useState("")
   const [submitResult, setSubmitResult] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -148,15 +150,22 @@ export function ResearchFeedPanel() {
 
   function toggleExpand(id: string) {
     if (expandedId === id) {
+      expandedRef.current = null
       setExpandedId(null)
       setHistory([])
       return
     }
+    expandedRef.current = id
     setExpandedId(id)
+    setHistory([])
     hostFetch(`/api/x/research-feed/verdicts/${encodeURIComponent(id)}`)
       .then((res) => res.json())
-      .then((body: { history?: Verdict[] }) => setHistory(body.history ?? []))
-      .catch(() => setHistory([]))
+      .then((body: { history?: Verdict[] }) => {
+        if (expandedRef.current === id) setHistory(body.history ?? [])
+      })
+      .catch(() => {
+        if (expandedRef.current === id) setHistory([])
+      })
   }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {

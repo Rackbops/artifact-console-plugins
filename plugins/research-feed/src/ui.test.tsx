@@ -118,6 +118,35 @@ test("expanding a row shows its history and corrections", async () => {
   expect(hostFetch).toHaveBeenCalledWith("/api/x/research-feed/verdicts/g1")
 })
 
+test("a late history answer for an earlier row does not replace the latest row's history", async () => {
+  const a = makeVerdict("gA", "keep")
+  const b = makeVerdict("gB", "keep")
+  const entry = (id: string, verdict: string) => makeVerdict(`${id}-${verdict}`, verdict)
+  let resolveA: (value: unknown) => void = () => {}
+  let resolveB: (value: unknown) => void = () => {}
+  hostFetch
+    .mockResolvedValueOnce(jsonResponse({ ok: true, feed: { state: "ok" } }))
+    .mockResolvedValueOnce(jsonResponse({ ok: true, verdicts: [a, b] }))
+    .mockReturnValueOnce(new Promise((resolve) => (resolveA = resolve)))
+    .mockReturnValueOnce(new Promise((resolve) => (resolveB = resolve)))
+  render(<ResearchFeedPanel />)
+  await waitFor(() => expect(screen.getByText("Link gA")).toBeTruthy())
+
+  const [showA, showB] = screen.getAllByRole("button", { name: "Show history" })
+  fireEvent.click(showA as HTMLElement)
+  fireEvent.click(showB as HTMLElement)
+  await waitFor(() => expect(hostFetch).toHaveBeenCalledTimes(4))
+
+  resolveB(jsonResponse({ ok: true, history: [entry("gB", "drop")] }))
+  await waitFor(() => expect(screen.getByLabelText("history for gB")).toBeTruthy())
+  await waitFor(() => expect(screen.getByLabelText("history for gB").children.length).toBe(1))
+  resolveA(jsonResponse({ ok: true, history: [entry("gA", "keep"), entry("gA", "drop")] }))
+  // Flush A's late answer, then assert it did not land on B's row.
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  expect(screen.getByLabelText("history for gB").children.length).toBe(1)
+  expect(screen.queryByLabelText("history for gA")).toBeNull()
+})
+
 test("submitting a url posts it and shows the confirmation", async () => {
   hostFetch
     .mockResolvedValueOnce(jsonResponse({ ok: true, feed: { state: "ok" } }))
