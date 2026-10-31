@@ -165,8 +165,8 @@ settings:
 catalogs:
   default:
     '@rackbops/ac-plugin-contract':
-      specifier: 2.0.0-alpha.64
-      version: 2.0.0-alpha.64
+      specifier: 2.0.0-alpha.65
+      version: 2.0.0-alpha.65
     '@types/node':
       specifier: ^26.0.0
       version: 26.6.6
@@ -198,7 +198,7 @@ importers:
         version: 2.6.3
       '@rackbops/ac-plugin-contract':
         specifier: 'catalog:'
-        version: 2.0.0-alpha.64
+        version: 2.0.0-alpha.65
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.6
@@ -216,7 +216,7 @@ importers:
     devDependencies:
       '@rackbops/ac-plugin-contract':
         specifier: 'catalog:'
-        version: 2.0.0-alpha.64
+        version: 2.0.0-alpha.65
       '@testing-library/dom':
         specifier: ^10.4.0
         version: 10.4.2
@@ -252,7 +252,7 @@ importers:
     devDependencies:
       '@rackbops/ac-plugin-contract':
         specifier: 'catalog:'
-        version: 2.0.0-alpha.64
+        version: 2.0.0-alpha.65
       '@rackbops/ui-react':
         specifier: 0.2.45
         version: 0.2.45(@rackbops/styles@0.2.45)(react@19.3.1)
@@ -510,8 +510,8 @@ packages:
   '@oxc-project/types@0.151.0':
     resolution: {integrity: sha512-J1yXrIlNDZVzE3ada310xeAw7nH8yCAyLPuUIsjKatFPmfn5bS1oW+cM+QsGOtVWd5nhSpbwZWx/rue+r5Z+PA==}
 
-  '@rackbops/ac-plugin-contract@2.0.0-alpha.64':
-    resolution: {integrity: sha512-4Oglw3MiWckiyEhsPLXy1MWiR8CWy+yR1JGLZwGKlCGeUDVvrsViSGJiQy58dmKlfaOUo7s5/w7Fu9q5u5macw==}
+  '@rackbops/ac-plugin-contract@2.0.0-alpha.65':
+    resolution: {integrity: sha512-ZDBbl/cdG7iufFBS/VUCxfT6+FTVYTKjxjO7EUzrPq4VteHqgFQgbrsF6ICmJzFOEx2wV7exNC+phpJFaGy65A==}
 
   '@rackbops/styles@0.2.45':
     resolution: {integrity: sha512-qTkQjVugCgkO4dqjAouMjgLHyOheZvQwjJJSjHzOwFNRa94B3eVc0N540Dx2TcOz6hLDpmzZV0ASxvOBBM2ezw==}
@@ -1401,7 +1401,7 @@ snapshots:
 
   '@oxc-project/types@0.151.0': {}
 
-  '@rackbops/ac-plugin-contract@2.0.0-alpha.64':
+  '@rackbops/ac-plugin-contract@2.0.0-alpha.65':
     dependencies:
       '@octokit/rest': 22.0.1
 
