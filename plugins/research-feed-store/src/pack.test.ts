@@ -37,7 +37,7 @@ test("the npm tarball holds exactly LICENSE, package.json and README.md", () => 
     encoding: "utf8",
   })
   const files = listing
-    .split("\n")
+    .split(/\r?\n/) // bsdtar on Windows prints CRLF
     .filter((line) => line !== "")
     .sort()
   expect(files).toEqual(["package/LICENSE", "package/README.md", "package/package.json"])
