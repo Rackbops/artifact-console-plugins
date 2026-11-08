@@ -19,7 +19,15 @@ afterEach(() => {
 test("the npm tarball holds exactly LICENSE, package.json and README.md", () => {
   const dest = mkdtempSync(join(tmpdir(), "research-feed-store-pack-"))
   dirs.push(dest)
-  execFileSync("pnpm", ["pack", "--pack-destination", dest], { cwd: pluginDir, stdio: "pipe" })
+  // On Windows pnpm is a pnpm.cmd shim that execFileSync cannot resolve without a shell (and
+  // Node refuses to spawn a .cmd directly), so go through the shell there only; the destination
+  // is quoted because a Windows temp path can hold spaces. Linux runs the real pack unchanged.
+  const win = process.platform === "win32"
+  execFileSync("pnpm", ["pack", "--pack-destination", win ? `"${dest}"` : dest], {
+    cwd: pluginDir,
+    stdio: "pipe",
+    shell: win,
+  })
   const tarballs = readdirSync(dest)
   expect(tarballs).toHaveLength(1)
   const listing = execFileSync("tar", ["-tzf", join(dest, tarballs[0] ?? "")], {
