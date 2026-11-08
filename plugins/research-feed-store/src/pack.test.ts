@@ -30,7 +30,10 @@ test("the npm tarball holds exactly LICENSE, package.json and README.md", () => 
   })
   const tarballs = readdirSync(dest)
   expect(tarballs).toHaveLength(1)
-  const listing = execFileSync("tar", ["-tzf", join(dest, tarballs[0] ?? "")], {
+  // Run tar from the tarball's directory with a relative name: GNU tar (Git Bash) reads a
+  // drive-letter path like C:\x.tgz as host:path, and bsdtar rejects --force-local.
+  const listing = execFileSync("tar", ["-tzf", tarballs[0] ?? ""], {
+    cwd: dest,
     encoding: "utf8",
   })
   const files = listing
