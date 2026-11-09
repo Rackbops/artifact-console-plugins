@@ -43,7 +43,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
           # No registry-url: setup-node would write an empty //registry.npmjs.org/:_authToken line
           # into .npmrc with no NPM_TOKEN set, which makes pnpm assume auth is already configured
           # and skip the OIDC exchange entirely (actions/setup-node#1551).
